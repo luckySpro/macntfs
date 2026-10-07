@@ -191,7 +191,16 @@ pub fn execute(args: Vec<String>) -> Result<String> {
         } else {
             ""
         };
-        let options = format!("rw,norecover,local,windows_names,uid={uid},gid={gid}{mode}");
+        let finder = finder_options(&volume.name);
+        let mut options =
+            format!("rw,norecover,local,windows_names,uid={uid},gid={gid},{finder}{mode}");
+        let icon = Path::new(
+            "/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns",
+        );
+        if icon.is_file() {
+            check_root_path(icon)?;
+            options.push_str(&format!(",volicon={}", icon.display()));
+        }
         let log_path = root.join("mount.log");
         if log_path.exists() {
             check_root_path(&log_path)?;
@@ -368,5 +377,48 @@ mod macos_permission_tests {
         ] {
             assert!(probe_diagnostic(Some(14), diagnostic).contains("休眠"));
         }
+    }
+}
+
+/// macFUSE options are comma-separated, so labels must never inject options.
+pub fn finder_options(name: &str) -> String {
+    let mut label = String::new();
+    for c in name.chars() {
+        let c = match c {
+            ',' => '，',
+            '\\' => '＼',
+            c if c.is_control() => ' ',
+            c => c,
+        };
+        if label.len() + c.len_utf8() > 255 {
+            break;
+        }
+        label.push(c);
+    }
+    let label = label.trim();
+    format!(
+        "auto_xattr,volname={}",
+        if label.is_empty() { "NTFS" } else { label }
+    )
+}
+#[cfg(test)]
+mod finder_tests {
+    use super::*;
+    #[test]
+    fn finder_label_cannot_inject_mount_flags() {
+        assert_eq!(finder_options("BackUp"), "auto_xattr,volname=BackUp");
+        assert_eq!(finder_options(""), "auto_xattr,volname=NTFS");
+        assert_eq!(
+            finder_options("Data,allow_other\\test\n"),
+            "auto_xattr,volname=Data，allow_other＼test"
+        );
+        assert_eq!(
+            finder_options(&"盘".repeat(100))
+                .split("volname=")
+                .nth(1)
+                .unwrap()
+                .len(),
+            255
+        );
     }
 }

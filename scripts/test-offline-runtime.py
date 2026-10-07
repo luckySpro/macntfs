@@ -6,7 +6,9 @@ Uses the built offline runtime without Homebrew libraries or network requests.
 import argparse, os, pathlib, subprocess, tempfile, time
 parser=argparse.ArgumentParser()
 parser.add_argument('--mkntfs', default='/opt/homebrew/opt/ntfs-3g-mac/sbin/mkntfs')
+parser.add_argument('--hold', type=int, default=0, help='Seconds to keep disposable Finder fixture mounted (max 60)')
 args=parser.parse_args()
+assert 0 <= args.hold <= 60
 root=pathlib.Path(__file__).resolve().parents[1]
 runtime=root/'vendor/runtime/bin'
 mount=pathlib.Path(f'/Volumes/macntfs-Test-{os.getpid()}')
@@ -19,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
     log=pathlib.Path(directory)/'driver.log'
     mounted=False
     with log.open('w') as output:
-        child=subprocess.Popen([str(runtime/'ntfs-3g'),str(image),str(mount),'-o',f'rw,norecover,no_detach,windows_names,uid={os.getuid()},gid={os.getgid()}'],stdin=subprocess.DEVNULL,stdout=output,stderr=output)
+        child=subprocess.Popen([str(runtime/'ntfs-3g'),str(image),str(mount),'-o',f'rw,norecover,no_detach,windows_names,auto_xattr,volname=macntfs-Test,volicon=/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns,uid={os.getuid()},gid={os.getgid()}'],stdin=subprocess.DEVNULL,stdout=output,stderr=output)
         try:
             deadline=time.monotonic()+20
             while time.monotonic()<deadline:
@@ -32,6 +34,19 @@ with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
             test=mount/'offline-roundtrip.txt'
             test.write_text('macntfs offline roundtrip\n')
             if test.read_text()!='macntfs offline roundtrip\n': raise RuntimeError('Readback mismatch')
+            nested=mount/'子目录'; nested.mkdir()
+            (nested/'文件.json').write_text('{"fixture":true}\n')
+            (nested/'readme.txt').write_text('Nested Finder fixture\n')
+            assert {'文件.json','readme.txt'}.issubset({p.name for p in nested.iterdir()})
+            import ctypes
+            lib=ctypes.CDLL('/usr/lib/libSystem.B.dylib',use_errno=True)
+            buffer=ctypes.create_string_buffer(32)
+            result=lib.getxattr(os.fsencode(nested/'文件.json'),b'com.apple.FinderInfo',buffer,32,0,0)
+            assert result==-1 and ctypes.get_errno()==93,(result,ctypes.get_errno())
+            print('PASS: nested files, FinderInfo absent returns ENOATTR (93), not EOPNOTSUPP',flush=True)
+            if args.hold:
+                print('Finder fixture: '+str(nested),flush=True)
+                time.sleep(args.hold)
             subprocess.run(['/usr/sbin/diskutil','unmount',str(mount)],check=True)
             mounted=False
             child.wait(timeout=5)
