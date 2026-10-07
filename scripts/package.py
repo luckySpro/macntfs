@@ -33,11 +33,11 @@ packages = build/'packages'; packages.mkdir()
 scripts = build/'runtime-scripts'; scripts.mkdir()
 shutil.copy2(root/'scripts/runtime-preinstall',scripts/'preinstall')
 run('/usr/bin/pkgbuild','--root',build/'runtime-root','--identifier','com.yuntu.ntfs-desktop.runtime','--version',version,'--ownership','recommended','--scripts',scripts,packages/'OfflineRuntime.pkg')
-app = dist/'NTFS Desktop.app'
+app = dist/'macntfs.app'
 if app.exists(): shutil.rmtree(app)
 (app/'Contents/MacOS').mkdir(parents=True)
 resources = app/'Contents/Resources'; resources.mkdir()
-shutil.copy2(root/'target/release/macntfs-app',app/'Contents/MacOS/ntfs-desktop')
+shutil.copy2(root/'target/release/macntfs',app/'Contents/MacOS/macntfs')
 shutil.copytree(runtime,resources/'Runtime')
 (resources/'Installers').mkdir()
 shutil.copy2(packages/'OfflineRuntime.pkg',resources/'Installers/OfflineRuntime.pkg')
@@ -64,8 +64,8 @@ for package in metadata['packages']:
 run('/usr/bin/swift',root/'scripts/make-icon.swift',root/'assets')
 shutil.copy2(root/'assets/AppIcon.icns',resources/'AppIcon.icns')
 info = {
-    'CFBundleExecutable':'ntfs-desktop','CFBundleIdentifier':'com.yuntu.ntfs-desktop',
-    'CFBundleName':'NTFS Desktop','CFBundleDisplayName':'NTFS Desktop','CFBundlePackageType':'APPL',
+    'CFBundleExecutable':'macntfs','CFBundleIdentifier':'com.yuntu.ntfs-desktop',
+    'CFBundleName':'macntfs','CFBundleDisplayName':'macntfs','CFBundlePackageType':'APPL',
     'CFBundleShortVersionString':version,'CFBundleVersion':version,'CFBundleIconFile':'AppIcon',
     'LSMinimumSystemVersion':'12.0','NSHighResolutionCapable':True,
     'NSRemovableVolumesUsageDescription':'识别和挂载用户选择的外置 NTFS 磁盘。'
@@ -77,14 +77,14 @@ run('/usr/bin/codesign','--verify','--deep','--strict',app)
 app_root = build/'app-root/Applications'; app_root.mkdir(parents=True)
 shutil.copytree(app,app_root/app.name)
 # Include current application source and reproducible driver build instructions.
-with tarfile.open(resources/f'Sources/ntfs-desktop-{version}-source.tar.gz','w:gz') as archive:
+with tarfile.open(resources/f'Sources/macntfs-{version}-source.tar.gz','w:gz') as archive:
     for path in ['frontend','src-tauri','package.json','package-lock.json','vite.config.js','VERSION','src','scripts','Cargo.toml','Cargo.lock','README.md','VALIDATION.md','LICENSE','vendor/manifest.json','vendor/licenses']:
-        archive.add(root/path,arcname=f'ntfs-desktop/{path}')
+        archive.add(root/path,arcname=f'macntfs/{path}')
 # Re-sign after adding the source archive and recreate the staged copy.
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
 shutil.rmtree(app_root/app.name); shutil.copytree(app,app_root/app.name)
 # Bundle relocation is disabled: the privileged helper trusts a fixed root path.
-components = [{'RootRelativeBundlePath':'Applications/NTFS Desktop.app','BundleIsRelocatable':False,'BundleIsVersionChecked':True,'BundleHasStrictIdentifier':True,'BundleOverwriteAction':'upgrade'}]
+components = [{'RootRelativeBundlePath':'Applications/macntfs.app','BundleIsRelocatable':False,'BundleIsVersionChecked':True,'BundleHasStrictIdentifier':True,'BundleOverwriteAction':'upgrade'}]
 with (build/'components.plist').open('wb') as f: plistlib.dump(components,f)
 run('/usr/bin/pkgbuild','--root',build/'app-root','--component-plist',build/'components.plist','--identifier','com.yuntu.ntfs-desktop.application','--version',version,'--ownership','recommended',packages/'Application.pkg')
 # Combine the official macFUSE components without changing their code-signed
@@ -94,14 +94,14 @@ for name in ['Core.pkg','PreferencePane.pkg']:
     run('/usr/sbin/pkgutil','--flatten',root/'vendor/macfuse-expanded'/name,packages/name)
 installer_resources = build/'installer-resources'
 shutil.copytree(root/'vendor/macfuse-expanded/Resources',installer_resources)
-welcome = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h1>NTFS Desktop</h1><p>免费的 macOS NTFS 读写工具</p><p>此离线安装包包含应用、NTFS-3G 读写引擎、权限助手和 macFUSE。安装和使用均无需 Homebrew 或联网下载。</p><p>首次使用仍需按 macOS 提示授权。稳定模式可能需要允许系统扩展并重启；macOS 15.4 及以上可手动选择实验性 FSKit 后端。</p><p>当前包适用于 Apple Silicon，macOS 12–15、26、27。未签名公证的开发测试包，尚未完成全系统兼容测试。</p></body></html>'
+welcome = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h1>macntfs</h1><p>免费的 macOS NTFS 读写工具</p><p>此离线安装包包含应用、NTFS-3G 读写引擎、权限助手和 macFUSE。安装和使用均无需 Homebrew 或联网下载。</p><p>首次使用仍需按 macOS 提示授权。稳定模式可能需要允许系统扩展并重启；macOS 15.4 及以上可手动选择实验性 FSKit 后端。</p><p>当前包适用于 Apple Silicon，macOS 12–15、26、27。未签名公证的开发测试包，尚未完成全系统兼容测试。</p></body></html>'
 (installer_resources/'Welcome.html').write_text(welcome)
 license_text = '\n\n'.join((root/'vendor/licenses'/f).read_text() for f in ['macfuse-LICENSE.txt','ntfs-3g-GPL.txt','ntfs-3g-LGPL.txt'])
-(installer_resources/'License.html').write_text('<html><meta charset="utf-8"><body><h2>NTFS Desktop · 免费开源</h2><p>应用代码采用 MIT 许可。驱动保留各自许可，源码随包附带。macFUSE 的商业捆绑需另行取得授权。</p><pre style="white-space:pre-wrap;font-size:11px">'+html.escape(license_text)+'</pre></body></html>')
-conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 NTFS Desktop</h2><p>从「应用程序」打开 NTFS Desktop，连接外置 NTFS 磁盘并选择「开启读写」。</p><p>如 macOS 提示允许文件系统扩展或重启，请先完成系统步骤。</p></body></html>'
+(installer_resources/'License.html').write_text('<html><meta charset="utf-8"><body><h2>macntfs · 免费开源</h2><p>应用代码采用 MIT 许可。驱动保留各自许可，源码随包附带。macFUSE 的商业捆绑需另行取得授权。</p><pre style="white-space:pre-wrap;font-size:11px">'+html.escape(license_text)+'</pre></body></html>')
+conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，连接外置 NTFS 磁盘并选择「开启读写」。</p><p>如 macOS 提示允许文件系统扩展或重启，请先完成系统步骤。</p></body></html>'
 (installer_resources/'Conclusion.html').write_text(conclusion)
 tree = ET.parse(root/'vendor/macfuse-expanded/Distribution'); distribution = tree.getroot()
-distribution.find('title').text = 'NTFS Desktop'
+distribution.find('title').text = 'macntfs'
 distribution.find('welcome').set('file','Welcome.html')
 distribution.find('license').set('file','License.html')
 ET.SubElement(distribution,'conclusion',{'file':'Conclusion.html'})
@@ -124,16 +124,16 @@ for identifier,name in [('com.yuntu.ntfs-desktop.runtime','OfflineRuntime.pkg'),
     reference = ET.SubElement(distribution,'pkg-ref',{'id':identifier,'version':version,'auth':'root'}); reference.text = '#'+name
 # No network URLs or package download locations appear in the distribution.
 tree.write(build/'Distribution',encoding='utf-8',xml_declaration=True)
-installer = dist/f'NTFS-Desktop-{version}-arm64.pkg'
+installer = dist/f'macntfs-{version}-arm64.pkg'
 arguments = ['/usr/bin/productbuild','--distribution',build/'Distribution','--resources',installer_resources,'--package-path',packages]
 if os.environ.get('NTFS_INSTALLER_SIGN_IDENTITY'): arguments += ['--sign',os.environ['NTFS_INSTALLER_SIGN_IDENTITY']]
 run(*arguments,installer)
 # Compact download image contains one Installer PKG and a short offline guide.
 dmg_root = build/'dmg-root'; dmg_root.mkdir()
 shutil.copy2(installer,dmg_root/installer.name)
-(dmg_root/'开始使用.txt').write_text(f'NTFS Desktop {version}（Apple Silicon）\n\n双击 PKG，按 macOS 安装器提示完成安装。\n打开「应用程序」中的 NTFS Desktop。\n本包包含全部读写组件，不需要 Homebrew 或网络。\n首次使用的系统授权不可跳过。\n本开发包尚未通过 Apple Developer ID 签名公证，不能视为公开发行版。\n')
-dmg = dist/f'NTFS-Desktop-{version}-arm64.dmg'
+(dmg_root/'开始使用.txt').write_text(f'macntfs {version}（Apple Silicon）\n\n双击 PKG，按 macOS 安装器提示完成安装。\n打开「应用程序」中的 macntfs。\n本包包含全部读写组件，不需要 Homebrew 或网络。\n首次使用的系统授权不可跳过。\n本开发包尚未通过 Apple Developer ID 签名公证，不能视为公开发行版。\n')
+dmg = dist/f'macntfs-{version}-arm64.dmg'
 if dmg.exists(): dmg.unlink()
-run('/usr/bin/hdiutil','create','-fs','HFS+','-volname','NTFS Desktop','-srcfolder',dmg_root,'-format','UDZO',dmg)
+run('/usr/bin/hdiutil','create','-fs','HFS+','-volname','macntfs','-srcfolder',dmg_root,'-format','UDZO',dmg)
 (dist/'SHA256SUMS').write_text(''.join(f'{digest(p)}  {p.name}\n' for p in [installer,dmg]))
 print(f'Offline installer: {installer}\nDownload image: {dmg}\nLocal app: {app}')

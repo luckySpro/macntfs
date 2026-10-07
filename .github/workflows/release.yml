@@ -29,7 +29,7 @@ jobs:
       - name: Sign updater archive
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-        run: python3 scripts/release.py && cargo run --locked -p macntfs-app --example verify-update
+        run: python3 scripts/release.py && cargo run --locked -p macntfs --example verify-update
       - name: Publish assets
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,5 +37,5 @@ jobs:
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --title "NTFS Desktop $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
+            gh release create "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --title "macntfs $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
           fi

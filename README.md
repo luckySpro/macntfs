@@ -1,4 +1,4 @@
-# NTFS Desktop / macntfs
+# macntfs
 
 免费开源的 macOS NTFS 桌面工具，Rust + Tauri 2 + Vue 3。支持 Apple Silicon，界面使用本机 WebKit，不依赖远程网页。
 
@@ -49,3 +49,5 @@ python3 scripts/validate-package.py
 在设置页选择「打开完整磁盘访问」及「打开助手位置」，手动将 `/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper` 添加并开启。macOS 隐私授权与 root 管理员密码不同。当前临时签名的助手更新后，旧授权可能因 code requirement 不匹配而失效；移除旧条目后重新添加，随后重启应用。完整磁盘访问权限较广，只为受信任的助手授权。正式发行需稳定的 Developer ID 签名。
 
 macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch`。`scripts/test-probe-permission.py` 在临时文件上注入 EPERM，验证返回访问失败 19 而不是休眠 14，不操作真实磁盘。
+
+应用显示名称、安装包及下载文件统一为 `macntfs`。为兼容已安装版本，Bundle ID 和权限助手的历史安装路径保持一致。

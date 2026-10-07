@@ -22,7 +22,7 @@ fn main() {
     .unwrap();
     let version = manifest["version"].as_str().unwrap();
     let mut data =
-        std::fs::read(root.join(format!("dist/NTFS-Desktop-{version}-arm64.app.tar.gz"))).unwrap();
+        std::fs::read(root.join(format!("dist/macntfs-{version}-arm64.app.tar.gz"))).unwrap();
     key.verify(&data, &signature, true).unwrap();
     assert!(signature.trusted_comment().contains(version));
     data[0] ^= 1;

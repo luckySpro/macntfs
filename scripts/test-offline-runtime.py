@@ -9,7 +9,7 @@ parser.add_argument('--mkntfs', default='/opt/homebrew/opt/ntfs-3g-mac/sbin/mknt
 args=parser.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1]
 runtime=root/'vendor/runtime/bin'
-mount=pathlib.Path(f'/Volumes/NTFS-Desktop-Test-{os.getpid()}')
+mount=pathlib.Path(f'/Volumes/macntfs-Test-{os.getpid()}')
 if mount.exists(): raise SystemExit('Test mount path already exists')
 with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
     image=pathlib.Path(directory)/'roundtrip.img'
@@ -30,8 +30,8 @@ with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
                 time.sleep(0.25)
             if not mounted: raise RuntimeError('No verified mounted filesystem: '+log.read_text())
             test=mount/'offline-roundtrip.txt'
-            test.write_text('NTFS Desktop offline roundtrip\n')
-            if test.read_text()!='NTFS Desktop offline roundtrip\n': raise RuntimeError('Readback mismatch')
+            test.write_text('macntfs offline roundtrip\n')
+            if test.read_text()!='macntfs offline roundtrip\n': raise RuntimeError('Readback mismatch')
             subprocess.run(['/usr/sbin/diskutil','unmount',str(mount)],check=True)
             mounted=False
             child.wait(timeout=5)

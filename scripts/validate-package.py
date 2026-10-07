@@ -2,8 +2,8 @@
 """Read-only package inspection; never installs or writes to a real disk."""
 import hashlib, json, pathlib, plistlib, subprocess, tempfile, xml.etree.ElementTree as ET
 root=pathlib.Path(__file__).resolve().parents[1]
-package=root/f"dist/NTFS-Desktop-{(root/'VERSION').read_text().strip()}-arm64.pkg"
-app=root/'dist/NTFS Desktop.app'
+package=root/f"dist/macntfs-{(root/'VERSION').read_text().strip()}-arm64.pkg"
+app=root/'dist/macntfs.app'
 def command(*args): return subprocess.check_output([str(x) for x in args],stderr=subprocess.STDOUT)
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     for line in (payload/'SHA256SUMS').read_text().splitlines():
         digest,name=line.split('  ',1); assert sha(payload/name)==digest,name; names.append(name)
     assert len(names)==4
-    executable=app/'Contents/MacOS/ntfs-desktop'
+    executable=app/'Contents/MacOS/macntfs'
     for binary in [executable,*[payload/name for name in names]]:
         command('/usr/bin/codesign','--verify','--strict',binary)
     command('/usr/bin/codesign','--verify','--deep','--strict',app)

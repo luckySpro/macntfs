@@ -1,5 +1,6 @@
 <script setup>
 import {ref,onMounted,onUnmounted} from 'vue';
+import {version as appVersion} from '../package.json';
 import {invoke} from '@tauri-apps/api/core';
 import {check} from '@tauri-apps/plugin-updater';
 import {relaunch} from '@tauri-apps/plugin-process';
@@ -17,7 +18,7 @@ onMounted(async()=>{await refresh();updates(true);timer=setInterval(()=>{if(!bus
 </script>
 <template>
 <div class="shell">
-<aside><div class="brand"><span class="logo"><HardDrive :size="23"/></span><div>NTFS Desktop<small>磁盘，自由读写。</small></div></div><div class="nav-label">工作空间</div><button :class="{active:page==='disks'}" @click="page='disks'"><HardDrive :size="18"/> 我的磁盘</button><button :class="{active:page==='settings'}" @click="page='settings'"><Settings :size="18"/> 设置与更新</button><div class="aside-footer"><span class="dot"></span> 本地运行 · 离线可用<small>免费开源 / v{{state?.version||'0.3.0'}}</small></div></aside>
+<aside><div class="brand"><span class="logo"><HardDrive :size="23"/></span><div>macntfs<small>磁盘，自由读写。</small></div></div><div class="nav-label">工作空间</div><button :class="{active:page==='disks'}" @click="page='disks'"><HardDrive :size="18"/> 我的磁盘</button><button :class="{active:page==='settings'}" @click="page='settings'"><Settings :size="18"/> 设置与更新</button><div class="aside-footer"><span class="dot"></span> 本地运行 · 离线可用<small>免费开源 / v{{state?.version||appVersion}}</small></div></aside>
 <main><header><div><span class="eyebrow">NTFS FOR MAC</span><h1>{{page==='disks'?'我的磁盘':'设置与更新'}}</h1><p>{{page==='disks'?'连接外置 NTFS 磁盘，轻松管理读写。':'管理读写组件和 GitHub 版本更新。'}}</p></div><button class="secondary" @click="refresh" :disabled="busy"><RefreshCw :size="16"/> 刷新</button></header>
 <section v-if="state && (!state.environment.runtime||!state.environment.fuse)" class="setup"><div class="icon"><ShieldCheck/></div><div><h3>完成读写组件安装</h3><p>{{!state.environment.runtime?'安装或更新内置读写组件，即可继续使用。':'请安装内置 macFUSE，并完成 macOS 系统授权。'}}</p><small>安装资源随软件提供，无需联网。</small></div><button class="primary" :disabled="busy" @click="act('install')">安装组件 <ArrowUpRight :size="16"/></button></section>
 <section v-if="notice" class="notice" :class="{error}"><strong>{{notice.split('\n')[0]}}</strong><button v-if="error && notice.includes('macOS 拒绝访问磁盘设备')" class="permission-button secondary" :disabled="busy" @click="act('permissions')">打开磁盘访问权限设置 <ArrowUpRight :size="15"/></button><button v-if="error && notice.includes('macOS 拒绝访问磁盘设备')" class="permission-button secondary" :disabled="busy" @click="act('permission-helper')">打开助手位置 <FolderOpen :size="15"/></button><details v-if="notice.includes('\n')"><summary>技术详情</summary><pre>{{notice.split('\n').slice(1).join('\n')}}</pre></details><button class="dismiss" @click="notice=''">×</button></section>

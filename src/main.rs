@@ -1,4 +1,4 @@
 fn main() {
-    println!("{:#?}", ntfs_desktop::system::environment());
-    println!("{:#?}", ntfs_desktop::system::scan());
+    println!("{:#?}", macntfs_core::system::environment());
+    println!("{:#?}", macntfs_core::system::scan());
 }

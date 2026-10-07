@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use ntfs_desktop::{
+use macntfs_core::{
     settings::{Backend, Settings},
     system,
 };
@@ -52,5 +52,5 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![snapshot, operate, save_settings])
         .run(tauri::generate_context!())
-        .expect("启动 NTFS Desktop 失败");
+        .expect("启动 macntfs 失败");
 }
