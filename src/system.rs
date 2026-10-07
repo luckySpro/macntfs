@@ -259,6 +259,23 @@ pub fn open_settings() -> Result<String> {
         &["x-apple.systempreferences:com.apple.preference.security?Privacy"],
     )
 }
+pub fn open_disk_permissions() -> Result<String> {
+    run(
+        "/usr/bin/open",
+        &["x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"],
+    )?;
+    Ok("已打开完整磁盘访问设置。请使用「打开助手位置」，将 ntfs-helper 添加到列表并开启；更新助手后若权限失效，请移除旧条目再重新添加。".into())
+}
+
+pub fn reveal_permission_helper() -> Result<String> {
+    let path = Path::new(RUNTIME).join("bin/ntfs-helper");
+    if !path.is_file() {
+        return Err("请先安装内置读写组件".into());
+    }
+    run("/usr/bin/open", &["-R", &path.to_string_lossy()])?;
+    Ok("已在 Finder 选中 ntfs-helper。请将它添加到「完整磁盘访问」列表并开启授权。".into())
+}
+
 pub fn install() -> Result<String> {
     let resources = resources().ok_or("请使用离线安装包，开发运行模式不包含安装资源")?;
     let env = environment();

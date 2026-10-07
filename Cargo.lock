@@ -1841,7 +1841,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "macntfs-app"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "base64 0.22.1",
  "minisign-verify",
@@ -1982,7 +1982,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "ntfs-desktop"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "plist",
  "serde",

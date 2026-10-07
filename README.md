@@ -41,3 +41,11 @@ python3 scripts/validate-package.py
 ## 许可
 
 应用与助手 MIT，NTFS-3G GPL/LGPL，macFUSE 保留其原始许可和签名。此项目免费非商业分发。macFUSE 商业捆绑需另行取得书面许可。上游资源版本和 SHA256 位于 `vendor/manifest.json`。
+
+## macOS 拒绝访问磁盘设备 / Operation not permitted
+
+驱动若在打开 `/dev/disk…` 时得到 EPERM，还未读取 NTFS，不代表 Windows 休眠。0.3.1 在驱动和助手两层修复该误判，保留真实休眠/缓存检查。
+
+在设置页选择「打开完整磁盘访问」及「打开助手位置」，手动将 `/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper` 添加并开启。macOS 隐私授权与 root 管理员密码不同。当前临时签名的助手更新后，旧授权可能因 code requirement 不匹配而失效；移除旧条目后重新添加，随后重启应用。完整磁盘访问权限较广，只为受信任的助手授权。正式发行需稳定的 Developer ID 签名。
+
+macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch`。`scripts/test-probe-permission.py` 在临时文件上注入 EPERM，验证返回访问失败 19 而不是休眠 14，不操作真实磁盘。

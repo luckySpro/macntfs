@@ -1,9 +1,10 @@
-Tauri 2 + Vue 3 的 NTFS Desktop 开发测试版（Apple Silicon）。
+NTFS Desktop v0.3.1（Apple Silicon 开发测试版）。
 
-- 自适应界面，错误详情可展开；区分 NTFS 休眠、损坏、占用和权限失败。
-- 内置 macFUSE / NTFS-3G / 权限助手，安装使用不需要 Homebrew 或联网。
-- 启动自动检查 GitHub 更新，支持签名验证、下载安装和重启。
-- 更新后如提示组件版本变化，请使用内置「安装组件」更新 root 运行组件。
+修复 macOS 权限被拒绝误报「Windows 休眠」：驱动区分打开设备时的 EPERM 与读取 NTFS 后发现的休眠状态，兼容旧驱动日志，并保留真实休眠/损坏保护。
+增加「完整磁盘访问」设置入口和「打开助手位置」，不再显示 Some(14) 等 Rust 调试格式。
 
-下载 DMG 或 PKG。首次使用按 macOS 提示授权驱动，可能需要重启。
-当前未做 Apple Developer ID 签名公证，属于开发测试版本；仅支持 Apple Silicon。请勿绕过磁盘休眠或损坏检查。
+从 v0.3.0 更新后请安装内置组件；在系统设置 → 隐私与安全性 → 完整磁盘访问中，移除旧 ntfs-helper 条目并重新添加当前助手：
+/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper
+
+当前临时签名可能导致更新后的旧授权失效。完整磁盘访问须用户手动授权，软件不会自动修改隐私数据库、关闭 SIP 或绕过真实 NTFS 休眠检查。
+尚未做 Apple Developer ID 签名公证。

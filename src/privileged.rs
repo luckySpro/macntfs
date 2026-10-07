@@ -172,9 +172,13 @@ pub fn execute(args: Vec<String>) -> Result<String> {
             .map_err(|e| format!("无法启动磁盘检查：{e}"))?;
         if !probe.status.success() {
             return Err(format!(
-                "{}\n探测代码：{:?}\n{}",
-                probe_message(probe.status.code()),
-                probe.status.code(),
+                "{}\n探测代码：{}\n{}",
+                probe_diagnostic(probe.status.code(), &String::from_utf8_lossy(&probe.stderr)),
+                probe
+                    .status
+                    .code()
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "进程被终止".into()),
                 String::from_utf8_lossy(&probe.stderr)
             ));
         }
@@ -305,14 +309,28 @@ mod tests {
     }
 }
 
+/// EPERM from opening a macOS device is not a filesystem hibernation diagnosis.
+/// Support older installed probes as well as our patched driver.
+pub fn probe_diagnostic(code: Option<i32>, diagnostic: &str) -> &'static str {
+    if diagnostic.lines().any(|line| {
+        line.starts_with("Error opening '")
+            && (line.contains("Operation not permitted") || line.contains("Permission denied"))
+    }) {
+        return probe_message(Some(19));
+    }
+    probe_message(code)
+}
+
 pub fn probe_message(code: Option<i32>) -> &'static str {
     match code {
         Some(12) => "磁盘未识别为 NTFS，请刷新磁盘列表。",
         Some(13) => "NTFS 文件系统异常。请在 Windows 中检查磁盘后重试。",
-        Some(14) => "Windows 休眠状态阻止读写。请关闭快速启动并完整关机后重试。",
+        Some(14) => "检测到 Windows 休眠或缓存状态。请关闭快速启动并完整关机后重试。",
         Some(15) => "磁盘未正常推出。请在 Windows 检查磁盘并安全推出后重试。",
         Some(16) => "磁盘被其他程序占用。请退出 Mounty 等挂载工具并重新连接磁盘。",
-        Some(19) => "磁盘访问权限不足。请重新授权管理员操作。",
+        Some(19) => {
+            "macOS 拒绝访问磁盘设备。请在「完整磁盘访问」中重新添加并授权权限助手 ntfs-helper，然后重试。"
+        }
         Some(21) => "文件系统驱动尚未就绪。请检查 macFUSE 安装和系统授权。",
         Some(22) => "磁盘或组件权限不安全，已停止开启读写。",
         _ => "磁盘检查未完成，请展开技术详情查看原因。",
@@ -329,5 +347,26 @@ mod diagnostic_tests {
         assert!(probe_message(Some(14)).contains("休眠"));
         assert!(probe_message(Some(13)).contains("检查磁盘"));
         assert!(probe_message(None).contains("技术详情"));
+    }
+}
+
+#[cfg(test)]
+mod macos_permission_tests {
+    use super::*;
+    #[test]
+    fn device_open_eperm_is_not_windows_hibernation() {
+        let diagnostic = "Error opening '/dev/disk4s3': Operation not permitted\n";
+        assert!(probe_diagnostic(Some(14), diagnostic).contains("macOS"));
+        assert!(!probe_diagnostic(Some(14), diagnostic).contains("休眠"));
+        assert!(probe_diagnostic(Some(19), diagnostic).contains("授权"));
+    }
+    #[test]
+    fn real_hibernation_stays_blocked() {
+        for diagnostic in [
+            "Windows is hibernated, refused to mount.",
+            "Metadata kept in Windows cache, refused to mount.",
+        ] {
+            assert!(probe_diagnostic(Some(14), diagnostic).contains("休眠"));
+        }
     }
 }

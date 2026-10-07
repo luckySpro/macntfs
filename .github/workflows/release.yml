@@ -23,7 +23,7 @@ jobs:
       - run: python3 scripts/prepare-vendor.py
       - name: Install build SDK
         run: sudo installer -pkg 'vendor/downloads/Install macFUSE.pkg' -target /
-      - run: bash scripts/build-driver.sh
+      - run: bash scripts/build-driver.sh && python3 scripts/test-probe-permission.py
       - run: npm run build && cargo test --locked --workspace && cargo build --locked --release --workspace
       - run: python3 scripts/package.py && python3 scripts/validate-package.py
       - name: Sign updater archive

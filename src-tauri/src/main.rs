@@ -35,6 +35,8 @@ async fn operate(
         "open" => system::open_volume(&volume.ok_or("请选择磁盘")?),
         "install" => system::install(),
         "settings" => system::open_settings(),
+        "permissions" => system::open_disk_permissions(),
+        "permission-helper" => system::reveal_permission_helper(),
         _ => Err("无效操作".into()),
     })
     .await

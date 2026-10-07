@@ -10,6 +10,12 @@ export MACOSX_DEPLOYMENT_TARGET=12.0
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 [ -f "$ntfs_source/configure" ] || (cd "$ntfs_source" && ./autogen.sh)
 cd "$ntfs_source"
+# Apply our documented macOS-only error mapping; preserve hibernation checks.
+if patch --dry-run -p1 < "$ntfs_project/scripts/patches/macos-device-permission.patch" >/dev/null 2>&1; then
+  patch -p1 < "$ntfs_project/scripts/patches/macos-device-permission.patch"
+else
+  patch --dry-run -R -p1 < "$ntfs_project/scripts/patches/macos-device-permission.patch" >/dev/null
+fi
 ./configure --prefix='/Library/Application Support/NTFS Desktop/Runtime' \
   --with-fuse=external --disable-crypto --disable-ntfsprogs --disable-plugins \
   --disable-library --disable-shared --enable-static > "$ntfs_project/vendor/build/configure.log" 2>&1

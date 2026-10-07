@@ -1,0 +1,17 @@
+--- a/libntfs-3g/volume.c
++++ b/libntfs-3g/volume.c
+@@ -558,6 +558,14 @@
+ 			}
+ 		} else {
+ 			ntfs_log_perror("Error opening '%s'", dev->d_name);
++#ifdef __APPLE__
++			/* macOS can reject opening a raw device with EPERM.
++			 * This happened before reading NTFS metadata, so it is
++			 * an access failure, not evidence of Windows hibernation.
++			 */
++			if (errno == EPERM)
++				errno = EACCES;
++#endif
+ 			goto error_exit;
+ 		}
+ 	}

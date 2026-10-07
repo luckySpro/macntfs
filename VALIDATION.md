@@ -35,3 +35,10 @@
 
 本机 0.3.0：7 项 Rust 测试通过；clippy 无警告；前端生产构建通过；临时 NTFS 镜像读写/卸载/拒绝损坏检查通过。macOS 原生 Tauri 窗口已截图检查，实际扫描到 BackUp 只读磁盘，未对其执行写入。PKG 检查通过：离线安装计划、原始 macFUSE 内容未修改、签名、驱动哈希、root 权限和动态库依赖闭包。
 最终更新归档验证通过：发布公钥验证成功、签名绑定 0.3.0、篡改一个字节后验证拒绝。DMG 内部校验通过。Apple Developer ID 和公证仍未具备；尚未对未来不同版本执行实际应用替换测试。
+
+## 0.3.1 权限误判修复
+
+用户提供 Error opening '/dev/disk4s3': Operation not permitted + 14。源码确认 ntfs_volume_error 将 EPERM 统一映射为 HIBERNATED；但该日志来自设备 open 失败、发生于 NTFS 元数据读取之前。
+本机 tccd 日志确认 ntfs-helper 的 kTCCServiceSystemPolicyAllFiles code requirement 匹配失败，现有授权与更新后的临时签名不匹配。未修改 TCC 数据库或自动授予权限。
+修复 macOS 驱动设备 open 的 EPERM → 访问失败映射；助手兼容旧输出，提供手动授权引导。临时文件 EPERM 注入回归测试通过，真实休眠检查保持不变。
+0.3.1 本机验证：9 项 Rust 测试、clippy、临时文件 EPERM 注入、NTFS 镜像完整读写与卸载、离线 PKG 校验、更新签名及篡改拒绝均通过。真实磁盘未执行新的挂载/写入；修复后的实际挂载需用户重新授权助手后验证。
