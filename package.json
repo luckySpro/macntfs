@@ -1,0 +1,23 @@
+{
+  "name": "macntfs",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite frontend --config vite.config.js --host 127.0.0.1",
+    "build": "vite build frontend --config vite.config.js --outDir ../web-dist --emptyOutDir",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-updater": "^2",
+    "@tauri-apps/plugin-process": "^2",
+    "vue": "^3.5",
+    "lucide-vue-next": "^0.468"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "vite": "^6",
+    "@vitejs/plugin-vue": "^5"
+  }
+}

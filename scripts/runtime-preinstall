@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+# Refuse installing privileged files through a user-controlled symlink/path.
+for ntfs_path in '/Library' '/Library/Application Support' '/Library/Application Support/NTFS Desktop' '/Library/Application Support/NTFS Desktop/Runtime'; do
+  [ ! -L "$ntfs_path" ] || { echo 'Unsafe runtime path: symbolic link' >&2; exit 1; }
+  if [ -e "$ntfs_path" ]; then
+    [ "$(/usr/bin/stat -f %u "$ntfs_path")" = 0 ] || { echo 'Unsafe runtime path: not root-owned' >&2; exit 1; }
+    ntfs_mode=$(/usr/bin/stat -f %Lp "$ntfs_path")
+    (( (8#$ntfs_mode & 8#022) == 0 )) || { echo 'Unsafe runtime path: writable by other users' >&2; exit 1; }
+  fi
+done

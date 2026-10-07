@@ -1,0 +1,28 @@
+{
+  "distribution": "free-open-source",
+  "macfuse": {
+    "version": "5.4.0",
+    "url": "https://github.com/macfuse/macfuse/releases/download/macfuse-5.4.0/macfuse-5.4.0.dmg",
+    "sha256": "861814f0ac7fa8f6547ea40cdd49a36ac84bcc7d34f38a1fa74e8cf68b0401c5",
+    "team_id": "3T5GSNBU6W",
+    "commercial_bundling": "Requires prior written permission from the copyright holder"
+  },
+  "ntfs3g": {
+    "version": "2026.9.28",
+    "url": "https://github.com/tuxera/ntfs-3g/archive/refs/tags/2026.9.28.tar.gz",
+    "sha256": "8a75293f07bf40df5701d296de32a4cb0e46d6ae135abb4f41b438df9868a390",
+    "source_included": true,
+    "plugins": false,
+    "crypto": false,
+    "library": "statically linked"
+  },
+  "target": "aarch64-apple-darwin",
+  "minimum_macos": "12.0",
+  "macfuse_library": {
+    "source_commit": "7a6cdd2b6e11071a706f4295aa931c65223ba953",
+    "source_sha256": "3d6c946d3775a7915f2c974b75612dc509e9f094864b9c1d729afd85c73936c8",
+    "binary_origin": "Unmodified Developer ID-signed library from macFUSE 5.4.0 Core.pkg",
+    "binary_signed_team_id": "3T5GSNBU6W",
+    "source_origin": "Public upstream source snapshot; vendor binary was not rebuilt from this snapshot"
+  }
+}

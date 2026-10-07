@@ -1,0 +1,41 @@
+name: Build and release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate release version
+        run: |
+          test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+      - run: npm ci
+      - run: brew install autoconf automake libtool pkgconf
+      - run: python3 scripts/prepare-vendor.py
+      - name: Install build SDK
+        run: sudo installer -pkg 'vendor/downloads/Install macFUSE.pkg' -target /
+      - run: bash scripts/build-driver.sh
+      - run: npm run build && cargo test --locked --workspace && cargo build --locked --release --workspace
+      - run: python3 scripts/package.py && python3 scripts/validate-package.py
+      - name: Sign updater archive
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: python3 scripts/release.py && cargo run --locked -p macntfs-app --example verify-update
+      - name: Publish assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --title "NTFS Desktop $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
+          fi
