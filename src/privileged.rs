@@ -397,7 +397,7 @@ pub fn finder_options(name: &str) -> String {
     }
     let label = label.trim();
     format!(
-        "auto_xattr,volname={}",
+        "streams_interface=openxattr,volname={}",
         if label.is_empty() { "NTFS" } else { label }
     )
 }
@@ -406,11 +406,17 @@ mod finder_tests {
     use super::*;
     #[test]
     fn finder_label_cannot_inject_mount_flags() {
-        assert_eq!(finder_options("BackUp"), "auto_xattr,volname=BackUp");
-        assert_eq!(finder_options(""), "auto_xattr,volname=NTFS");
+        assert_eq!(
+            finder_options("BackUp"),
+            "streams_interface=openxattr,volname=BackUp"
+        );
+        assert_eq!(
+            finder_options(""),
+            "streams_interface=openxattr,volname=NTFS"
+        );
         assert_eq!(
             finder_options("Data,allow_other\\test\n"),
-            "auto_xattr,volname=Data，allow_other＼test"
+            "streams_interface=openxattr,volname=Data，allow_other＼test"
         );
         assert_eq!(
             finder_options(&"盘".repeat(100))

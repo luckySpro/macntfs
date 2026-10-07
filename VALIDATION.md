@@ -42,3 +42,14 @@
 本机 tccd 日志确认 ntfs-helper 的 kTCCServiceSystemPolicyAllFiles code requirement 匹配失败，现有授权与更新后的临时签名不匹配。未修改 TCC 数据库或自动授予权限。
 修复 macOS 驱动设备 open 的 EPERM → 访问失败映射；助手兼容旧输出，提供手动授权引导。临时文件 EPERM 注入回归测试通过，真实休眠检查保持不变。
 0.3.1 本机验证：9 项 Rust 测试、clippy、临时文件 EPERM 注入、NTFS 镜像完整读写与卸载、离线 PKG 校验、更新签名及篡改拒绝均通过。真实磁盘未执行新的挂载/写入；修复后的实际挂载需用户重新授权助手后验证。
+
+
+## 0.3.4 Finder 兼容验证
+
+0.3.3 经正式 GUI / 已安装 root 助手重新挂载 BackUp 后，Finder 实际显示原先为空目录中的 5 个普通文件，桌面显示 BackUp 与系统外置磁盘图标。实盘仅用于挂载与读取元数据，未创建测试文件。
+
+进一步检查发现上游 NTFS-3G 在 fuse_mount 后释放了库选项，导致 volicon 未送入 fuse_new；auto_xattr 又绕过了卷图标模块提供的根目录 FinderInfo。0.3.4 使用官方支持的 streams_interface=openxattr，并在 macOS 上保留图标库选项。仅保留 volicon，避免将 nonempty 等挂载选项错误送入 fuse_new。
+
+临时 NTFS 镜像验证：Finder 显示两个中文/英文子目录文件，卷名 macntfs-Test 正确；虚拟 .VolumeIcon.icns 与系统 External.icns 完全一致；根目录 FinderInfo 为 32 字节且包含 0x0400 图标标记；普通文件缺失属性返回 ENOATTR（93）；原生扩展属性创建/读取/删除通过。此测试不在真实磁盘写入图标或测试属性。
+
+来源：https://github.com/tuxera/ntfs-3g/wiki/Using-Extended-Attributes 与 https://github.com/macfuse/macfuse/wiki/Mount-Options 。

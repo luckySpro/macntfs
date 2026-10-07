@@ -1,0 +1,68 @@
+--- a/src/ntfs-3g.c
++++ b/src/ntfs-3g.c
+@@ -4202,7 +4202,25 @@
+ 
+ #endif
+ 
+-static struct fuse_chan *try_fuse_mount(char *parsed_options)
++#ifdef __APPLE__
++/* Only library options belong in fuse_new. Kernel-only options have already
++ * been handled by fuse_mount; NTFS's nonempty option is not a library option. */
++static const struct fuse_opt ntfs_macos_library_opts[] = {
++	FUSE_OPT_KEY("volicon=%s", 1),
++	FUSE_OPT_END
++};
++static int ntfs_macos_library_opt_proc(void *data, const char *arg, int key,
++				      struct fuse_args *outargs)
++{
++	(void)data;
++	(void)arg;
++	(void)outargs;
++	return key == 1;
++}
++#endif
++
++static struct fuse_chan *try_fuse_mount(char *parsed_options,
++				       struct fuse_args *retained_args)
+ {
+ 	struct fuse_chan *fc = NULL;
+ 	struct fuse_args margs = FUSE_ARGS_INIT(0, NULL);
+@@ -4216,6 +4234,22 @@
+ 	}
+ 	
+ 	fc = fuse_mount(opts.mnt_point, &margs);
++#ifdef __APPLE__
++	/* fuse_mount removes kernel options. Keep the remaining library
++	 * options (notably volicon) for fuse_new and its stack modules. */
++	if (fc) {
++		if (fuse_opt_parse(&margs, NULL, ntfs_macos_library_opts,
++				   ntfs_macos_library_opt_proc) == -1) {
++			fuse_unmount(opts.mnt_point, fc);
++			fc = NULL;
++			goto free_args;
++		}
++		*retained_args = margs;
++		return fc;
++	}
++#else
++	(void)retained_args;
++#endif
+ free_args:
+ 	fuse_opt_free_args(&margs);
+ 	return fc;
+@@ -4246,12 +4280,14 @@
+ 	struct fuse *fh = NULL;
+ 	struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
+ 	
+-	ctx->fc = try_fuse_mount(parsed_options);
++	ctx->fc = try_fuse_mount(parsed_options, &args);
+ 	if (!ctx->fc)
+ 		return NULL;
+ 	
++#ifndef __APPLE__
+ 	if (fuse_opt_add_arg(&args, "") == -1)
+ 		goto err;
++#endif
+ 	if (ctx->ro) {
+ 		char buf[128];
+ 		int len;

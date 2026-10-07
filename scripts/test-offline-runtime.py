@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
     log=pathlib.Path(directory)/'driver.log'
     mounted=False
     with log.open('w') as output:
-        child=subprocess.Popen([str(runtime/'ntfs-3g'),str(image),str(mount),'-o',f'rw,norecover,no_detach,windows_names,auto_xattr,volname=macntfs-Test,volicon=/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns,uid={os.getuid()},gid={os.getgid()}'],stdin=subprocess.DEVNULL,stdout=output,stderr=output)
+        child=subprocess.Popen([str(runtime/'ntfs-3g'),str(image),str(mount),'-o',f'rw,norecover,no_detach,windows_names,streams_interface=openxattr,volname=macntfs-Test,volicon=/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns,uid={os.getuid()},gid={os.getgid()}'],stdin=subprocess.DEVNULL,stdout=output,stderr=output)
         try:
             deadline=time.monotonic()+20
             while time.monotonic()<deadline:
@@ -44,6 +44,15 @@ with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
             result=lib.getxattr(os.fsencode(nested/'文件.json'),b'com.apple.FinderInfo',buffer,32,0,0)
             assert result==-1 and ctypes.get_errno()==93,(result,ctypes.get_errno())
             print('PASS: nested files, FinderInfo absent returns ENOATTR (93), not EOPNOTSUPP',flush=True)
+            icon=pathlib.Path('/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns')
+            assert (mount/'.VolumeIcon.icns').read_bytes()==icon.read_bytes(),'macFUSE ignored custom disk icon'
+            result=lib.getxattr(os.fsencode(mount),b'com.apple.FinderInfo',buffer,32,0,0)
+            assert result==32 and int.from_bytes(buffer.raw[8:10],'big') & 0x0400,'Finder cannot see volume icon flag'
+            assert lib.setxattr(os.fsencode(test),b'com.macntfs.fixture',b'fixture',7,0,0)==0,ctypes.get_errno()
+            result=lib.getxattr(os.fsencode(test),b'com.macntfs.fixture',buffer,32,0,0)
+            assert result==7 and buffer.raw[:7]==b'fixture'
+            assert lib.removexattr(os.fsencode(test),b'com.macntfs.fixture',0)==0,ctypes.get_errno()
+            print('PASS: system disk icon bytes, Finder custom icon flag, native xattr roundtrip',flush=True)
             if args.hold:
                 print('Finder fixture: '+str(nested),flush=True)
                 time.sleep(args.hold)
