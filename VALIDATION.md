@@ -53,3 +53,5 @@
 临时 NTFS 镜像验证：Finder 显示两个中文/英文子目录文件，卷名 macntfs-Test 正确；虚拟 .VolumeIcon.icns 与系统 External.icns 完全一致；根目录 FinderInfo 为 32 字节且包含 0x0400 图标标记；普通文件缺失属性返回 ENOATTR（93）；原生扩展属性创建/读取/删除通过。此测试不在真实磁盘写入图标或测试属性。
 
 来源：https://github.com/tuxera/ntfs-3g/wiki/Using-Extended-Attributes 与 https://github.com/macfuse/macfuse/wiki/Mount-Options 。
+
+0.3.4 安装后实盘复测通过：正式 GUI 启动已安装的 root 助手，实际驱动参数为 streams_interface=openxattr、原卷名及系统 External.icns。Finder 实际显示原问题目录的 5 个普通文件；卷简介截图确认原名称与橙色系统外置磁盘图标。实盘虚拟图标字节与系统资源一致，根目录 FinderInfo 包含 0x0400 标记，已安装助手与驱动的哈希符合 0.3.4 清单。验证过程中未向实盘创建测试文件或写入图标文件。
