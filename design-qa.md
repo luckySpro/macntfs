@@ -33,3 +33,9 @@ Focused inspection: full-resolution disk/operation views and the full settings c
 `node scripts/test-ui.cjs` passed with the bundled Playwright module: theme persistence across reload, Finder/eject action parameters, settings navigation, empty state, read-only/unmounted selection and mount action parameters, three viewport widths, and no page errors. The isolated test browser does not access physical disks. Native tray creation compiles; physical tray clicks, actual eject/remount, clean-machine installation and OS security changes were not exercised in this iteration.
 
 Follow-up P3: native macOS icon material and illustration proportions can be refined after use. No blocking visual issues remain.
+
+## 0.3.9 快捷面板增量复核
+
+面板布局沿用已确认的配色与银色磁盘资产，参考用户提供的旧原生菜单，将平铺文本改为设备分组和图标按钮。隔离浏览器截图 `/tmp/macntfs-qa/panel.png`（420×540，DPR 1）及 CUA 原生截图（840×1080，Retina DPR 2）均已打开检查。三项操作在同一组内对齐，状态标签可识别，底部控制固定，多设备只在列表内滚动，无横向或整体纵向溢出。图标资源保持透明，中文文字清晰，深色主按钮使用深色文字保证对比。
+
+测试实例实际 Esc 收起和恢复主窗口通过；多设备、忙碌与错误状态以模拟 IPC 验证。主应用图标采用同一用户指定图像生成 ICNS。无新增阻断视觉问题；final result: passed。

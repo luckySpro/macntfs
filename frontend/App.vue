@@ -10,7 +10,7 @@ const state=ref(null),page=ref('disks'),busy=ref(false),notice=ref(''),error=ref
 const autoMount=ref(true),theme=ref('Stone'),selected=ref('');
 const selectedVolume=computed(()=>state.value?.volumes.find(v=>v.uuid===selected.value)||state.value?.volumes[0]);
 const visibleVolumes=computed(()=>theme.value!=='Stone'?(selectedVolume.value?[selectedVolume.value]:[]):state.value?.volumes||[]);
-let timer,unlistenDevices,unlistenResult,unlistenUpdate;
+let timer,unlistenDevices,unlistenResult,unlistenUpdate,unlistenNavigate;
 async function refresh(){try{state.value=await invoke('snapshot');backend.value=state.value.settings.backend;autoMount.value=state.value.settings.auto_mount;theme.value=state.value.settings.theme||'Stone';}catch(e){show(e,true)}}
 function show(message,isError=false){notice.value=String(message);error.value=isError}
 async function act(action,volume=null){if(busy.value||state.value?.monitor.busy)return;busy.value=true;notice.value='';try{show(await invoke('operate',{action,volume,backend:backend.value}));}catch(e){show(e,true)}finally{busy.value=false;await refresh()}}
@@ -18,7 +18,7 @@ async function save(){try{await invoke('save_settings',{settings:{backend:backen
 async function updates(quiet=false){try{update.value=await invoke('check_updates');updateText.value=update.value?`发现新版本 ${update.value.version}`:'已是最新版本';}catch(e){updateText.value=quiet?'暂时无法检查更新，离线功能可继续使用':`检查更新失败：${String(e)}`}}
 async function installUpdate(){if(!update.value||busy.value||updating.value)return;updating.value=true;progress.value=0;try{await invoke('install_update')}catch(e){show(`更新失败：${String(e)}。请重新检查更新后重试。`,true)}finally{updating.value=false}}
 function size(n){return n?(n/1e9).toFixed(1)+' GB':'—'}
-onMounted(async()=>{await refresh();unlistenDevices=await listen('devices-changed',()=>refresh());unlistenResult=await listen('operation-result',event=>{show(event.payload.message,event.payload.error);refresh()});unlistenUpdate=await listen('update-progress',event=>{const {received,total}=event.payload;progress.value=total?Math.round(received/total*100):0});updates(true);timer=setInterval(()=>{if(!busy.value)refresh()},8000)});onUnmounted(()=>{clearInterval(timer);unlistenDevices?.();unlistenResult?.();unlistenUpdate?.()});
+onMounted(async()=>{unlistenNavigate=await listen('navigate-settings',()=>{page.value='settings'});await refresh();unlistenDevices=await listen('devices-changed',()=>refresh());unlistenResult=await listen('operation-result',event=>{show(event.payload.message,event.payload.error);refresh()});unlistenUpdate=await listen('update-progress',event=>{const {received,total}=event.payload;progress.value=total?Math.round(received/total*100):0});updates(true);timer=setInterval(()=>{if(!busy.value)refresh()},8000)});onUnmounted(()=>{clearInterval(timer);unlistenDevices?.();unlistenResult?.();unlistenUpdate?.();unlistenNavigate?.()});
 </script>
 <template>
 <div class="shell" :data-theme="theme">

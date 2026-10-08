@@ -48,10 +48,12 @@ extern "C" fn should_terminate(_: Ref, _: Ref, _: Ref) -> usize {
     if unsafe { system_termination() } {
         return 1; // NSTerminateNow
     }
-    if let Some(app) = APP.get()
-        && let Some(window) = app.get_webview_window("main")
-    {
-        let _ = window.hide();
+    if let Some(app) = APP.get() {
+        for label in ["main", "tray-panel"] {
+            if let Some(window) = app.get_webview_window(label) {
+                let _ = window.hide();
+            }
+        }
     }
     0 // NSTerminateCancel; explicit tray exit/restart uses Tauri's event loop.
 }

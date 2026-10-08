@@ -5,12 +5,14 @@ const fs=require('fs');
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const page=await browser.newPage({viewport:{width:1440,height:1024}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
  const callbacks=new Map();let serial=0;let settings=JSON.parse(localStorage.getItem('qa-settings')||'{"backend":"Auto","dark":false,"auto_mount":true,"theme":"Stone"}');
- window.__QA_OPS=[];
+ window.__QA_OPS=[];window.__QA_WINDOW=[];
  window.__TAURI_INTERNALS__={transformCallback(cb){const id=++serial;callbacks.set(id,cb);return id},unregisterCallback(id){callbacks.delete(id)},invoke:async(cmd,args)=>{
- if(cmd==='snapshot')return {version:'0.3.8',volumes:JSON.parse(localStorage.getItem('qa-volumes')||'null')||[{uuid:'test-backup',name:'BackUp',id:'disk4s3',size:511700000000,mount:'/Volumes/NTFS-disk4s3',writable:true}],settings,environment:{runtime:true,fuse:true,service:true,os:'26.0',runtime_version:'0.3.8',fuse_version:'5.1.3'},monitor:{busy:false,last_event:''}};
+ if(cmd==='snapshot')return {version:'0.3.8',volumes:JSON.parse(localStorage.getItem('qa-volumes')||'null')||[{uuid:'test-backup',name:'BackUp',id:'disk4s3',size:511700000000,mount:'/Volumes/NTFS-disk4s3',writable:true}],settings,environment:{runtime:true,fuse:true,service:true,os:'26.0',runtime_version:'0.3.8',fuse_version:'5.1.3'},monitor:{busy:!!localStorage.getItem('qa-busy'),last_event:''}};
+ if(cmd==='set_auto_mount'){settings.auto_mount=args.enabled;localStorage.setItem('qa-settings',JSON.stringify(settings));return null}
  if(cmd==='save_settings'){settings=args.settings;localStorage.setItem('qa-settings',JSON.stringify(settings));return null}
- if(cmd==='operate'){window.__QA_OPS.push(args);return '操作完成'}
+ if(cmd==='operate'){if(localStorage.getItem('qa-error'))throw '模拟操作失败';window.__QA_OPS.push(args);return '操作完成'}
  if(cmd==='check_updates')return null;
+ if(cmd==='panel_action'){window.__QA_WINDOW.push(args.action);return null}
  if(cmd==='plugin:event|listen')return ++serial;
  if(cmd==='plugin:event|unlisten')return null;
  throw new Error('Unexpected IPC '+cmd);
@@ -31,5 +33,16 @@ const fs=require('fs');
  await page.evaluate(()=>localStorage.setItem('qa-volumes','[]'));await page.reload();await page.getByRole('heading',{name:'等待连接磁盘'}).waitFor();
  await page.evaluate(()=>localStorage.setItem('qa-volumes',JSON.stringify([{uuid:'a',name:'ReadOnly',id:'disk5s1',size:1000000000,mount:'/Volumes/ReadOnly',writable:false},{uuid:'b',name:'Disconnected',id:'disk6s1',size:2000000000,mount:'',writable:false}])));await page.reload();await page.getByRole('heading',{name:'ReadOnly',exact:true}).waitFor();await page.getByRole('button',{name:'开启读写',exact:true}).click();if((await page.evaluate(()=>window.__QA_OPS)).at(-1).volume.uuid!=='a')throw Error('wrong selected volume');
  await page.locator('.device-nav button').filter({hasText:'Disconnected'}).click();await page.getByRole('heading',{name:'Disconnected',exact:true}).waitFor();await page.getByRole('button',{name:'开启读写',exact:true}).click();if((await page.evaluate(()=>window.__QA_OPS)).at(-1).volume.uuid!=='b')throw Error('wrong switched volume');
- if(errors.length)throw Error(errors.join('\n'));console.log('PASS: three themes persist; Finder/eject IPC; settings; native/minimum width; no page errors');await browser.close();
+ await page.setViewportSize({width:420,height:540});await page.evaluate(()=>localStorage.removeItem('qa-volumes'));await page.goto((process.env.TEST_UI_URL||'http://127.0.0.1:1420')+'/?panel');await page.locator('.panel-volume').waitFor();
+ if(!(await page.getByRole('button',{name:'开启读写',exact:true}).isDisabled()))throw Error('writable volume allows mount');
+ await page.getByRole('button',{name:'打开 Finder',exact:true}).click();await page.getByRole('button',{name:'安全推出',exact:true}).click();const panelOps=await page.evaluate(()=>window.__QA_OPS);if(panelOps.at(-2).action!=='open'||panelOps.at(-1).action!=='eject')throw Error('panel operations incorrect');
+ await page.getByRole('switch',{name:'插入后自动开启读写'}).click();if(await page.getByRole('switch').getAttribute('aria-checked')!=='false')throw Error('panel toggle not saved');
+ await page.getByRole('button',{name:'打开主窗口',exact:true}).click();await page.getByRole('button',{name:'设置与更新',exact:true}).click();await page.keyboard.press('Escape');const windows=await page.evaluate(()=>window.__QA_WINDOW);if(windows.join(',')!=='show,settings,hide')throw Error('panel navigation incorrect');
+ await page.screenshot({path:'/tmp/macntfs-qa/panel.png'});
+ await page.evaluate(()=>localStorage.setItem('qa-volumes',JSON.stringify(Array.from({length:6},(_,i)=>({uuid:'panel-'+i,name:'Disk '+i,id:'disk'+i+'s1',mount:'/Volumes/Disk'+i,writable:i%2===0,size:1000000000})))));await page.reload();await page.locator('.panel-volume').last().waitFor();
+ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight))throw Error('panel viewport overflow');if(!(await page.evaluate(()=>{const el=document.querySelector('.panel-devices');return el.scrollHeight>el.clientHeight})))throw Error('multi-volume panel not scrollable');
+ await page.getByRole('button',{name:'安全推出',exact:true}).last().click();if((await page.evaluate(()=>window.__QA_OPS)).at(-1).volume.uuid!=='panel-5')throw Error('panel targets wrong volume');
+ await page.evaluate(()=>localStorage.setItem('qa-busy','1'));await page.reload();await page.locator('.panel-volume').last().waitFor();if(!(await page.getByRole('button',{name:'安全推出',exact:true}).last().isDisabled()))throw Error('panel allows concurrent eject');
+ await page.evaluate(()=>{localStorage.removeItem('qa-busy');localStorage.setItem('qa-error','1')});await page.reload();await page.locator('.panel-volume').last().waitFor();await page.getByRole('button',{name:'安全推出',exact:true}).last().click();await page.getByText('模拟操作失败',{exact:true}).waitFor();if(await page.getByRole('button',{name:'安全推出',exact:true}).last().isDisabled())throw Error('failed panel operation stays locked');
+ if(errors.length)throw Error(errors.join('\n'));console.log('PASS: three themes persist; Finder/eject IPC; settings; native/minimum width; panel buttons/toggle/navigation/multi-volume/busy/error; no page errors');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

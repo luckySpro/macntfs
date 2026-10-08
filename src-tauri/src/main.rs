@@ -5,17 +5,22 @@ use macntfs_core::{
     settings::{Backend, Settings},
     system,
 };
-use std::{collections::HashSet, sync::Mutex, time::Duration};
+use std::{
+    collections::HashSet,
+    sync::Mutex,
+    time::{Duration, Instant},
+};
 use tauri::{
     Emitter, Manager,
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
-    tray::TrayIconBuilder,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 #[derive(Clone, Default, serde::Serialize)]
 struct Monitor {
     volumes: Vec<system::Volume>,
     last_event: String,
     busy: bool,
+    last_error: bool,
 }
 #[derive(serde::Serialize)]
 struct Snapshot {
@@ -69,6 +74,7 @@ fn report(app: &tauri::AppHandle, result: Result<String, String>) {
     };
     if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
         monitor.last_event = message.clone();
+        monitor.last_error = error;
         monitor.busy = false;
     }
     let _ = app.emit(
@@ -100,16 +106,104 @@ async fn operate(
     .await
     .map_err(|e| e.to_string())?
 }
+#[derive(Default)]
+struct SettingsState(Mutex<()>);
 #[tauri::command]
-fn save_settings(settings: Settings) -> Result<(), String> {
-    settings.save()
+fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
+    let state = app.state::<SettingsState>();
+    let _guard = state.0.lock().map_err(|e| e.to_string())?;
+    settings.save()?;
+    let _ = app.emit("devices-changed", ());
+    Ok(())
+}
+#[tauri::command]
+fn set_auto_mount(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
+    let state = app.state::<SettingsState>();
+    let _guard = state.0.lock().map_err(|e| e.to_string())?;
+    let mut settings = Settings::load();
+    settings.auto_mount = enabled;
+    settings.save()?;
+    let _ = app.emit("devices-changed", ());
+    Ok(())
 }
 fn show_window(app: &tauri::AppHandle) {
+    if let Some(panel) = app.get_webview_window("tray-panel") {
+        let _ = panel.hide();
+    }
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+}
+#[derive(Default)]
+struct PanelState {
+    last_blur: Mutex<Option<Instant>>,
+}
+#[tauri::command]
+fn panel_action(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("tray-panel") {
+        let _ = window.hide();
+    }
+    match action.as_str() {
+        "hide" => {}
+        "show" => show_window(&app),
+        "settings" => {
+            show_window(&app);
+            let _ = app.emit_to("main", "navigate-settings", ());
+        }
+        "quit" => app.exit(0),
+        _ => return Err("无效窗口操作".into()),
+    }
+    Ok(())
+}
+fn toggle_panel(app: &tauri::AppHandle, position: tauri::PhysicalPosition<f64>, rect: tauri::Rect) {
+    let Some(window) = app.get_webview_window("tray-panel") else {
+        return;
+    };
+    if window.is_visible().unwrap_or(false) {
+        let _ = window.hide();
+        return;
+    }
+    if app
+        .state::<PanelState>()
+        .last_blur
+        .lock()
+        .ok()
+        .and_then(|v| *v)
+        .is_some_and(|t| t.elapsed() < Duration::from_millis(180))
+    {
+        return;
+    }
+    let monitors = window.available_monitors().unwrap_or_default();
+    if let Some(monitor) = monitors.into_iter().find(|m| {
+        let p = m.position();
+        let size = m.size();
+        position.x >= p.x as f64
+            && position.x < p.x as f64 + size.width as f64
+            && position.y >= p.y as f64
+            && position.y < p.y as f64 + size.height as f64
+    }) {
+        let scale = monitor.scale_factor();
+        let area = monitor.work_area();
+        let width = 420.0_f64.min(area.size.width as f64 / scale - 16.0);
+        let height = 540.0_f64.min(area.size.height as f64 / scale - 16.0);
+        let _ = window.set_size(tauri::LogicalSize::new(width, height));
+        let origin = rect.position.to_physical::<f64>(scale);
+        let size = rect.size.to_physical::<f64>(scale);
+        let x = (origin.x + size.width / 2.0 - width * scale / 2.0).clamp(
+            area.position.x as f64 + 8.0,
+            area.position.x as f64 + area.size.width as f64 - width * scale - 8.0,
+        );
+        let y = (origin.y + size.height + 6.0).clamp(
+            area.position.y as f64 + 4.0,
+            area.position.y as f64 + area.size.height as f64 - height * scale - 4.0,
+        );
+        let _ = window.set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
+    }
+    let _ = app.emit_to("tray-panel", "devices-changed", ());
+    let _ = window.show();
+    let _ = window.set_focus();
 }
 fn tray_menu(
     app: &tauri::AppHandle,
@@ -217,22 +311,30 @@ fn menu_action(app: &tauri::AppHandle, id: &str) {
         "show" => show_window(app),
         "quit" => app.exit(0),
         "auto" => {
-            let mut settings = Settings::load();
-            settings.auto_mount = !settings.auto_mount;
-            let result = settings.save().map(|_| {
-                if settings.auto_mount {
-                    "已开启插入自动读写"
-                } else {
-                    "已关闭自动读写"
-                }
-                .into()
-            });
+            let state = app.state::<SettingsState>();
+            let result = state
+                .0
+                .lock()
+                .map_err(|e| e.to_string())
+                .and_then(|_guard| {
+                    let mut settings = Settings::load();
+                    settings.auto_mount = !settings.auto_mount;
+                    settings.save().map(|_| {
+                        if settings.auto_mount {
+                            "已开启插入自动读写"
+                        } else {
+                            "已关闭自动读写"
+                        }
+                        .into()
+                    })
+                });
             let (message, error) = match result {
                 Ok(message) => (message, false),
                 Err(message) => (message, true),
             };
             if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
                 monitor.last_event = message.clone();
+                monitor.last_error = error;
             }
             let _ = app.emit(
                 "operation-result",
@@ -356,22 +458,62 @@ fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(Monitor::default()))
         .manage(updates::Pending::default())
+        .manage(PanelState::default())
+        .manage(SettingsState::default())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let handle = app.handle();
             native_lifecycle::install(handle.clone())?;
-            TrayIconBuilder::with_id("macntfs")
+            let tray = TrayIconBuilder::with_id("macntfs")
                 .icon(tray_image())
                 .icon_as_template(true)
                 .tooltip("macntfs · NTFS 自动读写")
                 .menu(&tray_menu(handle, &Monitor::default(), false)?)
+                .show_menu_on_left_click(false)
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        position,
+                        rect,
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        toggle_panel(tray.app_handle(), position, rect);
+                    }
+                })
                 .on_menu_event(|app, event| menu_action(app, event.id.as_ref()))
                 .build(app)?;
+            #[cfg(debug_assertions)]
+            if std::env::var_os("MACNTFS_PREVIEW_PANEL").is_some() {
+                if let Some(main) = handle.get_webview_window("main") {
+                    let _ = main.hide();
+                }
+                if let Some(rect) = tray.rect()? {
+                    let scale = handle
+                        .primary_monitor()?
+                        .map(|m| m.scale_factor())
+                        .unwrap_or(1.0);
+                    let point = rect.position.to_physical::<f64>(scale);
+                    toggle_panel(handle, point, rect);
+                }
+            }
+            #[cfg(not(debug_assertions))]
+            let _ = tray;
             start_monitor(handle.clone());
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() == "tray-panel"
+                && matches!(event, tauri::WindowEvent::Focused(false))
+                && window.is_visible().unwrap_or(false)
+            {
+                let _ = window.hide();
+                if let Ok(mut last) = window.app_handle().state::<PanelState>().last_blur.lock() {
+                    *last = Some(Instant::now());
+                }
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
@@ -381,6 +523,8 @@ fn main() {
             snapshot,
             operate,
             save_settings,
+            panel_action,
+            set_auto_mount,
             updates::check_updates,
             updates::install_update
         ])
@@ -395,8 +539,10 @@ fn main() {
                 code: None, api, ..
             } => {
                 api.prevent_exit();
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.hide();
+                for label in ["main", "tray-panel"] {
+                    if let Some(window) = app.get_webview_window(label) {
+                        let _ = window.hide();
+                    }
                 }
             }
             _ => {}

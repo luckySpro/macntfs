@@ -85,3 +85,5 @@ macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch
 点击 macntfs 菜单栏图标，各磁盘下直接提供「在 Finder 中打开」「开启读写」「安全推出整块磁盘」。安全推出会推出该磁盘的其他分区；操作期间暂停重复操作。关闭主窗口后这些功能继续可用。
 
 前端回归检查：先运行 `npm run dev -- --port 1420`，再运行 `node scripts/test-ui.cjs`。需可用的 Playwright 与 Chrome；可通过 `PLAYWRIGHT_MODULE`、`CHROME_EXECUTABLE` 和 `TEST_UI_URL` 指定路径。测试模拟 IPC，验证主题保存、多磁盘选择、空状态、操作参数及窗口宽度，不会访问实体磁盘。
+
+0.3.9 起，左键点击菜单栏图标会打开带图标和按钮的分组快捷面板；右键仍保留原生菜单。面板按磁盘显示状态，可打开 Finder、开启读写、安全推出，以及切换插入自动读写。Esc 或点击其他窗口会收起面板。

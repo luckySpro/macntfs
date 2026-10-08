@@ -1,7 +1,8 @@
 {
   "identifier": "main",
   "windows": [
-    "main"
+    "main",
+    "tray-panel"
   ],
   "permissions": [
     "core:default",
