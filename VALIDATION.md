@@ -66,3 +66,12 @@
 正式应用尚未安装到 /Applications，本轮尚未完成受信任 GUI 的免密码挂载、物理拔插后自动挂载和菜单栏交互的完整实机验证。已将系统安装器交给用户完成安装；不把现有 0.3.4 的可写挂载算作新版自动挂载成功。Touch ID 是否出现由系统安装器决定，本轮未验证指纹授权。
 
 应用自更新会改变应用文件所有权，必须安装对应完整 PKG，同步助手并恢复 root 权限；GUI 已显示引导，未宣称 root 助手可无授权自动升级。
+
+
+## 0.3.6 Dock 生命周期修复
+
+增加 Tauri Reopen 处理恢复主窗口；CloseRequested 继续隐藏窗口。实际测试发现 Cocoa terminate 绕过 Tauri ExitRequested，因此在现有应用 delegate 注册 applicationShouldTerminate，普通原生退出只隐藏窗口，显式菜单栏退出与更新重启保持 Tauri 程序退出。系统退出原因按 SDK 的 kAEQuitReason 放行关机、重启与注销；未执行实际关机或注销测试。
+
+本机原生 GUI 验证：关闭窗口后后台仍在，macOS 再次打开恢复主窗口；Command-Q 后应用清单仍为运行中，进程 PID 58150 保持不变。恢复窗口后显示 0.3.6 和真实 NTFS 状态。Dock 右键菜单本身未直接点击；验证的是它使用的同一 Cocoa terminate 路径和 macOS reopen 路径。
+
+12 项 Rust 测试、前端构建、Clippy（-D warnings）及离线 release 构建通过。本轮未卸载、写入或修复真实磁盘。

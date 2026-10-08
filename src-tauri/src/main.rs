@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod native_lifecycle;
 use macntfs_core::{
     settings::{Backend, Settings},
     system,
@@ -303,6 +304,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let handle = app.handle();
+            native_lifecycle::install(handle.clone())?;
             TrayIconBuilder::with_id("macntfs")
                 .icon(tray_image())
                 .icon_as_template(true)
@@ -320,6 +322,21 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![snapshot, operate, save_settings])
-        .run(tauri::generate_context!())
-        .expect("启动 macntfs 失败");
+        .build(tauri::generate_context!())
+        .expect("启动 macntfs 失败")
+        .run(|app, event| match event {
+            // Dock click / Dock Open must restore the hidden main window.
+            tauri::RunEvent::Reopen { .. } => show_window(app),
+            // Native Dock Quit and Cmd-Q hide the UI but preserve monitoring.
+            // Explicit tray Quit and updater restart use Some(code) and exit.
+            tauri::RunEvent::ExitRequested {
+                code: None, api, ..
+            } => {
+                api.prevent_exit();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+            _ => {}
+        });
 }
