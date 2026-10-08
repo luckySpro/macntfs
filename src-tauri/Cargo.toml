@@ -2,6 +2,7 @@
 name = "macntfs"
 version = "0.3.7"
 edition = "2024"
+authors = ["Lucky <473276@qq.com>"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 [dependencies]

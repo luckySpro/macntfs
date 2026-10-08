@@ -4,6 +4,9 @@
 2、解决了原来使用时需要下载多个软件，用一个包把所有的进行集成；
 
 
+作者：Lucky  
+邮箱：473276@qq.com
+
 免费开源的 macOS NTFS 桌面工具，Rust + Tauri 2 + Vue 3。支持 Apple Silicon，界面使用本机 WebKit，不依赖远程网页。
 
 下载：[GitHub Releases](https://github.com/luckySpro/macntfs/releases/latest)。DMG 内的 PKG 包含应用、macFUSE、NTFS-3G 和 root 权限助手，终端用户安装和磁盘读写无需联网、Homebrew 或命令行。首次仍须完成 macOS 驱动授权，稳定内核模式可能需要重启。
