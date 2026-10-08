@@ -106,3 +106,5 @@
 13 项 Rust 单元测试、Clippy（workspace/all-targets，-D warnings）、Vue 生产构建与离线 release 构建通过。隔离浏览器模拟 IPC，验证三套主题保存与重载、多设备选择、读写/未挂载/空状态、Finder 与推出的参数、设置页以及 1440、1060、760 宽度无横向溢出。已检查截图并与已确认效果图比较，详见 design-qa.md。
 
 完整离线 PKG 结构、root 权限、GUI Hardened Runtime、内置组件哈希及原厂 macFUSE 签名校验通过。本轮没有对用户实体磁盘执行推出、写入、挂载，也没有安装到 /Applications、重启或改变系统授权。菜单栏真实点击与干净系统安装尚未实机验证；不能把模拟 IPC 测试当作这些操作已经成功。
+
+0.3.8 发布后复核：九个 GitHub 资源的服务端 SHA256 均与本地最终文件一致。真实 Tauri updater 模拟 0.3.7 客户端，通过 latest-installer.json 检测到 0.3.8，下载完整 PKG，并通过版本绑定签名验证，字节与本地发布包完全一致。刚发布时 latest 地址曾短暂返回旧清单，发布传播完成后再次检查通过。没有执行安装。
