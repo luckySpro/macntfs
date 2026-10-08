@@ -39,3 +39,9 @@ Follow-up P3: native macOS icon material and illustration proportions can be ref
 面板布局沿用已确认的配色与银色磁盘资产，参考用户提供的旧原生菜单，将平铺文本改为设备分组和图标按钮。隔离浏览器截图 `/tmp/macntfs-qa/panel.png`（420×540，DPR 1）及 CUA 原生截图（840×1080，Retina DPR 2）均已打开检查。三项操作在同一组内对齐，状态标签可识别，底部控制固定，多设备只在列表内滚动，无横向或整体纵向溢出。图标资源保持透明，中文文字清晰，深色主按钮使用深色文字保证对比。
 
 测试实例实际 Esc 收起和恢复主窗口通过；多设备、忙碌与错误状态以模拟 IPC 验证。主应用图标采用同一用户指定图像生成 ICNS。无新增阻断视觉问题；final result: passed。
+
+## 0.3.10 圆角与风格入口复核
+
+用户截图中的圆角露白源于不透明的窗口与文档背景。快捷面板开启 Tauri macOS 透明窗口功能，并仅将面板 html/body/#app 背景设为透明；主窗口背景保持原主题。顶部原生下拉框移除，主题切换集中在设置页的卡片。三种风格切换与重载保存通过，1060×760 与 760×600 无横向溢出。`/tmp/macntfs-qa/panel-{Stone,Office,Graphite}.png` 以透明截图保存，Pillow 检查四角 alpha 均为 0。
+
+CUA 查看实际 WebKit 主窗口和快捷面板，顶部按钮排布正常；原生截图为 RGB，捕获时透明区域显示白色，不能用此截图断言桌面合成后的角落颜色。原生窗口透明配置及 macos-private-api 编译通过。磁盘操作使用模拟 IPC 回归，无真实推出、挂载或写入。

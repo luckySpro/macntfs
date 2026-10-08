@@ -1,12 +1,12 @@
 [package]
 name = "macntfs"
-version = "0.3.9"
+version = "0.3.10"
 edition = "2024"
 authors = ["Lucky <473276@qq.com>"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 [dependencies]
-tauri = { version = "2", features = ["custom-protocol", "tray-icon"] }
+tauri = { version = "2", features = ["custom-protocol", "tray-icon", "macos-private-api"] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 macntfs-core = { path = ".." }

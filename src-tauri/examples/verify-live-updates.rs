@@ -4,7 +4,7 @@ use tauri_plugin_updater::UpdaterExt;
 fn main() {
     let mut context = tauri::generate_context!();
     context.config_mut().app.windows.clear();
-    context.package_info_mut().version = "0.3.8".parse().unwrap();
+    context.package_info_mut().version = "0.3.9".parse().unwrap();
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
@@ -16,11 +16,11 @@ fn main() {
                         .map_err(|e| e.to_string())?
                         .timeout(Duration::from_secs(120)).build().map_err(|e| e.to_string())?;
                     let update = updater.check().await.map_err(|e| e.to_string())?
-                        .ok_or("expected an update for the 0.3.8 client")?;
+                        .ok_or("expected an update for the 0.3.9 client")?;
                     if update.version != env!("CARGO_PKG_VERSION") {
                         return Err(format!("GitHub latest reports {}, expected {}; retry after release propagation", update.version, env!("CARGO_PKG_VERSION")));
                     }
-                    println!("PASS: 0.3.8 detects {} at {}", update.version, update.download_url);
+                    println!("PASS: 0.3.9 detects {} at {}", update.version, update.download_url);
                     let data = update.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
                     let expected = std::fs::read(format!("dist/macntfs-{}-arm64.pkg", update.version)).map_err(|e| e.to_string())?;
                     if !data.starts_with(b"xar!") || data != expected {

@@ -19,9 +19,10 @@ const fs=require('fs');
  }};
  });
  await page.goto(process.env.TEST_UI_URL||'http://127.0.0.1:1420');await page.getByRole('heading',{name:'BackUp',exact:true}).waitFor();fs.mkdirSync('/tmp/macntfs-qa',{recursive:true});
+ if(await page.locator('.header-actions select').count())throw Error('native theme selector remains');
  for(const theme of ['Stone','Office','Graphite']){
- await page.getByLabel('界面风格').selectOption(theme);await page.waitForTimeout(150);if(await page.locator('.dismiss').count())await page.locator('.dismiss').click();await page.screenshot({path:`/tmp/macntfs-qa/${theme}.png`,fullPage:true});
- await page.reload();await page.getByRole('heading',{name:'BackUp',exact:true}).waitFor();if(await page.getByLabel('界面风格').inputValue()!==theme)throw Error('theme not persisted');
+ await page.getByRole('button',{name:'设置与更新',exact:true}).click();await page.locator('.theme-options button').filter({hasText:({Stone:'暖灰原生',Office:'简洁办公',Graphite:'深色工作台'})[theme]}).click();await page.getByRole('button',{name:'我的磁盘',exact:true}).click();await page.waitForTimeout(150);if(await page.locator('.dismiss').count())await page.locator('.dismiss').click();await page.screenshot({path:`/tmp/macntfs-qa/${theme}.png`,fullPage:true});
+ await page.reload();await page.getByRole('heading',{name:'BackUp',exact:true}).waitFor();if(await page.locator('.shell').getAttribute('data-theme')!==theme)throw Error('theme not persisted');
  await page.getByRole('button',{name:'打开 Finder',exact:true}).click();await page.getByRole('button',{name:'安全推出',exact:true}).click();
  const ops=await page.evaluate(()=>window.__QA_OPS);if(ops.at(-2).action!=='open'||ops.at(-1).action!=='eject')throw Error('wrong disk actions');
  await page.setViewportSize({width:1060,height:760});await page.screenshot({path:`/tmp/macntfs-qa/${theme}-native.png`,fullPage:true});
@@ -39,6 +40,7 @@ const fs=require('fs');
  await page.getByRole('switch',{name:'插入后自动开启读写'}).click();if(await page.getByRole('switch').getAttribute('aria-checked')!=='false')throw Error('panel toggle not saved');
  await page.getByRole('button',{name:'打开主窗口',exact:true}).click();await page.getByRole('button',{name:'设置与更新',exact:true}).click();await page.keyboard.press('Escape');const windows=await page.evaluate(()=>window.__QA_WINDOW);if(windows.join(',')!=='show,settings,hide')throw Error('panel navigation incorrect');
  await page.screenshot({path:'/tmp/macntfs-qa/panel.png'});
+ for(const theme of ['Stone','Office','Graphite']){await page.evaluate(theme=>{const s=JSON.parse(localStorage.getItem('qa-settings'));s.theme=theme;localStorage.setItem('qa-settings',JSON.stringify(s))},theme);await page.reload();await page.locator('.panel-volume').waitFor();if(!(await page.evaluate(()=>[document.documentElement,document.body,document.querySelector('#app')].every(el=>getComputedStyle(el).backgroundColor==='rgba(0, 0, 0, 0)'))))throw Error('opaque popup document '+theme);await page.screenshot({path:`/tmp/macntfs-qa/panel-${theme}.png`,omitBackground:true});}
  await page.evaluate(()=>localStorage.setItem('qa-volumes',JSON.stringify(Array.from({length:6},(_,i)=>({uuid:'panel-'+i,name:'Disk '+i,id:'disk'+i+'s1',mount:'/Volumes/Disk'+i,writable:i%2===0,size:1000000000})))));await page.reload();await page.locator('.panel-volume').last().waitFor();
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight))throw Error('panel viewport overflow');if(!(await page.evaluate(()=>{const el=document.querySelector('.panel-devices');return el.scrollHeight>el.clientHeight})))throw Error('multi-volume panel not scrollable');
  await page.getByRole('button',{name:'安全推出',exact:true}).last().click();if((await page.evaluate(()=>window.__QA_OPS)).at(-1).volume.uuid!=='panel-5')throw Error('panel targets wrong volume');
