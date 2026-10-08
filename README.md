@@ -77,3 +77,11 @@ macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch
 从 0.3.6 及更早版本迁移，请直接安装 GitHub Release 的完整 PKG。0.3.7 的更新检查使用 `latest-installer.json`，通过 Tauri 下载并验证最终 PKG 与签名中的版本，打开系统安装器后退出旧 GUI。完成安装再从「应用程序」启动，应用和 root 助手由同一个完整 PKG 更新。旧 `latest.json` 应用归档保留供历史客户端使用，不代表旧客户端会自动升级助手。
 
 「首次使用向导」包含安装、驱动授权、磁盘访问与完成检查。Apple 芯片稳定内核模式的恢复步骤按 [macFUSE 官方指南](https://github.com/macfuse/macfuse/wiki/Getting-Started) 和 [Apple 启动安全策略](https://support.apple.com/zh-cn/guide/mac-help/mchl768f7291/mac) 编写；详细说明降低安全性及允许用户管理内核扩展。Intel 不适用 Apple 芯片的步骤，FSKit 不要求恢复模式但本应用实现仍为实验性。应用不会代替用户修改系统安全设置。
+
+### 界面与菜单栏
+
+窗口右上角或「设置与更新 → 界面风格」可切换暖灰原生、简洁办公、深色工作台，选择自动保存。办公风格通过列表选择磁盘，深色工作台通过设备侧栏选择磁盘。
+
+点击 macntfs 菜单栏图标，各磁盘下直接提供「在 Finder 中打开」「开启读写」「安全推出整块磁盘」。安全推出会推出该磁盘的其他分区；操作期间暂停重复操作。关闭主窗口后这些功能继续可用。
+
+前端回归检查：先运行 `npm run dev -- --port 1420`，再运行 `node scripts/test-ui.cjs`。需可用的 Playwright 与 Chrome；可通过 `PLAYWRIGHT_MODULE`、`CHROME_EXECUTABLE` 和 `TEST_UI_URL` 指定路径。测试模拟 IPC，验证主题保存、多磁盘选择、空状态、操作参数及窗口宽度，不会访问实体磁盘。

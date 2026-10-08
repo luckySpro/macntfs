@@ -8,7 +8,7 @@ use macntfs_core::{
 use std::{collections::HashSet, sync::Mutex, time::Duration};
 use tauri::{
     Emitter, Manager,
-    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
 };
 #[derive(Clone, Default, serde::Serialize)]
@@ -83,6 +83,15 @@ async fn operate(
     volume: Option<system::Volume>,
     backend: Backend,
 ) -> Result<String, String> {
+    {
+        let state = app.state::<Mutex<Monitor>>();
+        let mut monitor = state.lock().map_err(|e| e.to_string())?;
+        if monitor.busy {
+            return Err("已有磁盘操作正在执行，请稍后重试".into());
+        }
+        monitor.busy = true;
+    }
+    let _ = app.emit("devices-changed", ());
     tauri::async_runtime::spawn_blocking(move || {
         let result = operation(&action, volume, backend);
         report(&app, result.clone());
@@ -143,29 +152,35 @@ fn tray_menu(
         } else {
             "只读"
         };
-        let sub = Submenu::new(app, format!("{} · {}", volume.name, state), true)?;
-        sub.append(&MenuItem::with_id(
+        menu.append(&PredefinedMenuItem::separator(app)?)?;
+        menu.append(&MenuItem::with_id(
+            app,
+            format!("volume:{}", volume.uuid),
+            format!("{} · {}", volume.name, state),
+            false,
+            None::<&str>,
+        )?)?;
+        menu.append(&MenuItem::with_id(
             app,
             format!("open:{}", volume.uuid),
             "在 Finder 中打开",
-            !volume.mount.is_empty(),
+            !monitor.busy && !volume.mount.is_empty(),
             None::<&str>,
         )?)?;
-        sub.append(&MenuItem::with_id(
+        menu.append(&MenuItem::with_id(
             app,
             format!("mount:{}", volume.uuid),
             "开启读写",
             ready && !monitor.busy && (!volume.writable || volume.mount.is_empty()),
             None::<&str>,
         )?)?;
-        sub.append(&MenuItem::with_id(
+        menu.append(&MenuItem::with_id(
             app,
             format!("eject:{}", volume.uuid),
             "安全推出整块磁盘",
             !monitor.busy,
             None::<&str>,
         )?)?;
-        menu.append(&sub)?;
     }
     if monitor.volumes.is_empty() {
         menu.append(&MenuItem::with_id(
@@ -212,16 +227,40 @@ fn menu_action(app: &tauri::AppHandle, id: &str) {
                 }
                 .into()
             });
-            report(app, result);
+            let (message, error) = match result {
+                Ok(message) => (message, false),
+                Err(message) => (message, true),
+            };
+            if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
+                monitor.last_event = message.clone();
+            }
+            let _ = app.emit(
+                "operation-result",
+                serde_json::json!({"message":message,"error":error}),
+            );
             let _ = app.emit("devices-changed", ());
         }
         _ => {
             if let Some((action, uuid)) = id.split_once(':') {
-                let volume = app
-                    .state::<Mutex<Monitor>>()
-                    .lock()
-                    .ok()
-                    .and_then(|m| m.volumes.iter().find(|v| v.uuid == uuid).cloned());
+                if !matches!(action, "open" | "mount" | "eject") {
+                    return;
+                }
+                let volume = {
+                    let state = app.state::<Mutex<Monitor>>();
+                    let Ok(mut monitor) = state.lock() else {
+                        return;
+                    };
+                    if monitor.busy {
+                        return;
+                    }
+                    let Some(volume) = monitor.volumes.iter().find(|v| v.uuid == uuid).cloned()
+                    else {
+                        return;
+                    };
+                    monitor.busy = true;
+                    Some(volume)
+                };
+                let _ = app.emit("devices-changed", ());
                 let app = app.clone();
                 let action = action.to_owned();
                 tauri::async_runtime::spawn_blocking(move || {
@@ -254,11 +293,24 @@ fn start_monitor(app: tauri::AppHandle) {
                 if settings.auto_mount && ready {
                     for volume in &volumes {
                         if (!volume.writable || volume.mount.is_empty())
-                            && attempted.insert(volume.uuid.clone())
+                            && !attempted.contains(&volume.uuid)
                         {
-                            if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
-                                monitor.busy = true;
+                            let claimed = app
+                                .state::<Mutex<Monitor>>()
+                                .lock()
+                                .map(|mut monitor| {
+                                    if monitor.busy {
+                                        false
+                                    } else {
+                                        monitor.busy = true;
+                                        true
+                                    }
+                                })
+                                .unwrap_or(false);
+                            if !claimed {
+                                break;
                             }
+                            attempted.insert(volume.uuid.clone());
                             let _ = app.emit("devices-changed", ());
                             report(&app, system::mount(volume, settings.backend));
                         }

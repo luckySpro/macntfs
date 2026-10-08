@@ -39,11 +39,19 @@ pub fn supports_fskit(os: &str) -> bool {
         _ => false,
     }
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Theme {
+    #[default]
+    Stone,
+    Office,
+    Graphite,
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub backend: Backend,
     pub dark: bool,
+    pub theme: Theme,
     pub auto_mount: bool,
 }
 impl Default for Settings {
@@ -51,6 +59,7 @@ impl Default for Settings {
         Self {
             backend: Backend::Auto,
             dark: false,
+            theme: Theme::Stone,
             auto_mount: true,
         }
     }
@@ -82,6 +91,24 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn older_settings_keep_backend_and_automount() {
+        let settings: Settings =
+            serde_json::from_str(r#"{"backend":"Kernel","dark":false,"auto_mount":false}"#)
+                .unwrap();
+        assert_eq!(settings.theme, Theme::Stone);
+        assert_eq!(settings.backend, Backend::Kernel);
+        assert!(!settings.auto_mount);
+        for theme in [Theme::Stone, Theme::Office, Theme::Graphite] {
+            let settings = Settings {
+                theme,
+                ..Settings::default()
+            };
+            let restored: Settings =
+                serde_json::from_slice(&serde_json::to_vec(&settings).unwrap()).unwrap();
+            assert_eq!(restored.theme, theme);
+        }
+    }
     #[test]
     fn selects_supported_backends() {
         assert!(!supports_fskit("14.7"));
