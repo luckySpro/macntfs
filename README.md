@@ -1,4 +1,8 @@
-# macntfs
+# macntfs【不好用就自己写系列之mac上的ntfs硬盘使用工具】
+核心解决问题：
+1、mac上读写NTFS分区
+2、解决了原来使用时需要下载多个软件，用一个包把所有的进行集成；
+
 
 免费开源的 macOS NTFS 桌面工具，Rust + Tauri 2 + Vue 3。支持 Apple Silicon，界面使用本机 WebKit，不依赖远程网页。
 
