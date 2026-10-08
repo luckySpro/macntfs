@@ -3,3 +3,9 @@
 .permission-button{display:flex;margin-top:14px;font-size:12px}.setting-row{flex-wrap:wrap}
 
 input[type=checkbox]{width:20px;height:20px;accent-color:#7561da;cursor:pointer}
+
+.guide-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.guide-tabs button{background:#f0eef8;color:#70658b;font-size:12px}.guide-tabs .selected{background:#7561d8;color:#fff}.guide ol{padding-left:23px;color:#657087;line-height:1.9;font-size:13px}.guide li{margin:8px 0}.guide details{background:#f7f6fc;border:1px solid #e8e3f4;border-radius:12px;padding:15px}.guide summary{font-size:13px;color:#625586;font-weight:600}.guide-status{background:#eef7f2;color:#397c60;padding:14px;border-radius:10px;margin:18px 0}.guide .guide-note{font-size:11px;color:#8a91a1}.guide a{color:#7561d8}.guide-footer{display:flex;justify-content:flex-end;gap:10px;margin:22px 0}.helper-path{display:block;padding:14px;background:#f4f3f9;border-radius:9px;overflow-wrap:anywhere;font-size:12px;user-select:text}
+
+.guide-link{background:none;padding:0;color:#7561d8;font-size:11px;text-decoration:underline}
+
+.header-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}

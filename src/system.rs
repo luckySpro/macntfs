@@ -27,6 +27,7 @@ pub struct Environment {
     pub runtime_issue: String,
     pub service: bool,
     pub service_issue: String,
+    pub runtime_version: String,
 }
 pub fn resources() -> Option<PathBuf> {
     let executable = std::env::current_exe().ok()?;
@@ -35,9 +36,8 @@ pub fn resources() -> Option<PathBuf> {
     path.is_dir().then_some(path)
 }
 pub fn environment() -> Environment {
+    let installed = std::fs::read_to_string(Path::new(RUNTIME).join("VERSION")).unwrap_or_default();
     let check = crate::privileged::verify_runtime(Path::new(RUNTIME)).and_then(|_| {
-        let installed =
-            std::fs::read_to_string(Path::new(RUNTIME).join("VERSION")).unwrap_or_default();
         if installed.trim() == env!("CARGO_PKG_VERSION") {
             Ok(())
         } else {
@@ -67,6 +67,7 @@ pub fn environment() -> Environment {
         runtime_issue: check.err().unwrap_or_default(),
         service: service.is_ok(),
         service_issue: service.err().unwrap_or_default(),
+        runtime_version: installed.trim().into(),
     }
 }
 pub fn run(program: &str, args: &[&str]) -> Result<String> {
@@ -241,6 +242,17 @@ pub fn reveal_permission_helper() -> Result<String> {
     }
     run("/usr/bin/open", &["-R", &path.to_string_lossy()])?;
     Ok("已在 Finder 选中 ntfs-helper。请将它添加到「完整磁盘访问」列表并开启授权。".into())
+}
+
+pub fn open_guide(apple: bool) -> Result<String> {
+    run(
+        "/usr/bin/open",
+        &[if apple {
+            "https://support.apple.com/zh-cn/guide/mac-help/mchl768f7291/mac"
+        } else {
+            "https://github.com/macfuse/macfuse/wiki/Getting-Started"
+        }],
+    )
 }
 
 pub fn open_release() -> Result<String> {

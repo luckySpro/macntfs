@@ -28,7 +28,7 @@ python3 scripts/validate-package.py
 
 `python3 scripts/version.py 0.3.1` 同步 VERSION、Rust 和前端版本，再运行 `npm install --package-lock-only` 和 `cargo check --workspace` 更新锁文件。提交后推送 `v0.3.1` 标签，GitHub Actions 会构建 PKG、DMG、最终 `.app.tar.gz` 签名和 `latest.json` 并创建 Release。
 
-仓库 secret `TAURI_SIGNING_PRIVATE_KEY` 保存 Tauri 更新私钥；只提交公钥。私钥应额外安全备份，不能加入源码或 Release。签名覆盖最终应用及所有离线资源。客户端启动检查 GitHub，用户点击下载安装后校验签名并重启；网络失败不影响本地功能。root Runtime 通过内置系统安装器更新；版本不匹配时禁止启动旧助手。
+仓库 secret `TAURI_SIGNING_PRIVATE_KEY` 保存 Tauri 更新私钥；只提交公钥。私钥应额外安全备份，不能加入源码或 Release。签名覆盖最终应用及所有离线资源。客户端启动检查 GitHub；0.3.7 起下载完整 PKG 并验证签名及版本，再由系统安装器同步升级 GUI 与助手。安装后从「应用程序」启动。网络失败不影响本地功能，版本不匹配时禁止启动旧助手。
 
 本地发布：设置 `NTFS_UPDATE_KEY` 为私钥文件路径，运行 `python3 scripts/release.py`。Apple 正式签名另需 `NTFS_APPLICATION_SIGN_IDENTITY` / `NTFS_INSTALLER_SIGN_IDENTITY`，签名后仍须 Apple 公证并 staple，当前流程不宣称已公证。
 
@@ -61,4 +61,11 @@ macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch
 
 安全边界：launchd root 助手仅提供状态检查和 NTFS 安全挂载，限制当前控制台用户、固定 /Applications/macntfs.app 路径、root 所有权和不可写应用文件、进程审计令牌与 Hardened Runtime 签名。开发目录中的 GUI、任意脚本和其他应用不能调用后台挂载。自动挂载失败会保留诊断，仅在重新插入或明确操作时重试。
 
-0.3.5 起，应用自更新后需安装对应版本的完整 PKG，同步助手版本并恢复 root 所有权；仅安装内置 Runtime 不足以恢复自更新后的应用权限。日常磁盘挂载免密码，软件升级仍需系统安装授权。
+0.3.5 至 0.3.6，应用自更新后需安装对应版本的完整 PKG，同步助手版本并恢复 root 所有权；仅安装内置 Runtime 不足以恢复自更新后的应用权限。日常磁盘挂载免密码，软件升级仍需系统安装授权。
+
+
+## 完整安装包更新与首次向导（0.3.7）
+
+从 0.3.6 及更早版本迁移，请直接安装 GitHub Release 的完整 PKG。0.3.7 的更新检查使用 `latest-installer.json`，通过 Tauri 下载并验证最终 PKG 与签名中的版本，打开系统安装器后退出旧 GUI。完成安装再从「应用程序」启动，应用和 root 助手由同一个完整 PKG 更新。旧 `latest.json` 应用归档保留供历史客户端使用，不代表旧客户端会自动升级助手。
+
+「首次使用向导」包含安装、驱动授权、磁盘访问与完成检查。Apple 芯片稳定内核模式的恢复步骤按 [macFUSE 官方指南](https://github.com/macfuse/macfuse/wiki/Getting-Started) 和 [Apple 启动安全策略](https://support.apple.com/zh-cn/guide/mac-help/mchl768f7291/mac) 编写；详细说明降低安全性及允许用户管理内核扩展。Intel 不适用 Apple 芯片的步骤，FSKit 不要求恢复模式但本应用实现仍为实验性。应用不会代替用户修改系统安全设置。

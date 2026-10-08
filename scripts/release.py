@@ -14,5 +14,9 @@ subprocess.run([*args,str(archive)],cwd=root,check=True)
 signature=archive.with_suffix(archive.suffix+'.sig').read_text().strip()
 manifest={'version':version,'notes':(root/'RELEASE_NOTES.md').read_text(),'pub_date':datetime.datetime.now(datetime.timezone.utc).isoformat(),'platforms':{'darwin-aarch64':{'signature':signature,'url':f'https://github.com/luckySpro/macntfs/releases/download/v{version}/{archive.name}'}}}
 (root/'dist/latest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
-files=[p for p in (root/'dist').iterdir() if p.is_file() and (p.name.startswith(f'macntfs-{version}-') or p.name in ['latest.json','validation-report.json'])]
+installer=root/f'dist/macntfs-{version}-arm64.pkg'
+subprocess.run([*args,str(installer)],cwd=root,check=True)
+installer_manifest={**manifest,'platforms':{'darwin-aarch64':{'signature':installer.with_suffix('.pkg.sig').read_text().strip(),'url':f'https://github.com/luckySpro/macntfs/releases/download/v{version}/{installer.name}'}}}
+(root/'dist/latest-installer.json').write_text(json.dumps(installer_manifest,ensure_ascii=False,indent=2)+'\n')
+files=[p for p in (root/'dist').iterdir() if p.is_file() and (p.name.startswith(f'macntfs-{version}-') or p.name in ['latest.json','latest-installer.json','validation-report.json'])]
 (root/'dist/SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in sorted(files)))

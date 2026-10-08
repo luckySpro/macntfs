@@ -35,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --clobber
+            gh release upload "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/latest-installer.json dist/SHA256SUMS dist/validation-report.json --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/SHA256SUMS dist/validation-report.json --title "macntfs $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
+            gh release create "$GITHUB_REF_NAME" dist/*.pkg dist/*.dmg dist/*.tar.gz dist/*.sig dist/latest.json dist/latest-installer.json dist/SHA256SUMS dist/validation-report.json --title "macntfs $GITHUB_REF_NAME" --notes-file RELEASE_NOTES.md
           fi

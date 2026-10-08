@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod native_lifecycle;
+mod updates;
 use macntfs_core::{
     settings::{Backend, Settings},
     system,
@@ -53,6 +54,8 @@ fn operation(
         "open" => system::open_volume(&volume.ok_or("请选择磁盘")?),
         "install" => system::install(),
         "release" => system::open_release(),
+        "guide-macfuse" => system::open_guide(false),
+        "guide-apple" => system::open_guide(true),
         "settings" => system::open_settings(),
         "permissions" => system::open_disk_permissions(),
         "permission-helper" => system::reveal_permission_helper(),
@@ -300,6 +303,7 @@ fn tray_image() -> tauri::image::Image<'static> {
 fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(Monitor::default()))
+        .manage(updates::Pending::default())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
@@ -321,7 +325,13 @@ fn main() {
                 let _ = window.hide();
             }
         })
-        .invoke_handler(tauri::generate_handler![snapshot, operate, save_settings])
+        .invoke_handler(tauri::generate_handler![
+            snapshot,
+            operate,
+            save_settings,
+            updates::check_updates,
+            updates::install_update
+        ])
         .build(tauri::generate_context!())
         .expect("启动 macntfs 失败")
         .run(|app, event| match event {

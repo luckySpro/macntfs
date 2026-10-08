@@ -105,7 +105,7 @@ welcome = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sa
 (installer_resources/'Welcome.html').write_text(welcome)
 license_text = '\n\n'.join((root/'vendor/licenses'/f).read_text() for f in ['macfuse-LICENSE.txt','ntfs-3g-GPL.txt','ntfs-3g-LGPL.txt'])
 (installer_resources/'License.html').write_text('<html><meta charset="utf-8"><body><h2>macntfs · 免费开源</h2><p>应用代码采用 MIT 许可。驱动保留各自许可，源码随包附带。macFUSE 的商业捆绑需另行取得授权。</p><pre style="white-space:pre-wrap;font-size:11px">'+html.escape(license_text)+'</pre></body></html>')
-conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，菜单栏会实时检测外置 NTFS 磁盘并自动开启读写。安装后台助手后日常挂载无需重复输入密码。</p><p>如 macOS 提示允许文件系统扩展或重启，请先完成系统步骤。</p></body></html>'
+conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，菜单栏会实时检测外置 NTFS 磁盘并自动开启读写。安装后台助手后日常挂载无需重复输入密码。</p><p>首次使用请打开应用内「首次使用向导」，按安装、驱动授权、磁盘访问和完成检查四步操作。恢复模式操作说明可在向导中展开查看。</p></body></html>'
 (installer_resources/'Conclusion.html').write_text(conclusion)
 tree = ET.parse(root/'vendor/macfuse-expanded/Distribution'); distribution = tree.getroot()
 distribution.find('title').text = 'macntfs'

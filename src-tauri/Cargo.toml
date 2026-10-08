@@ -1,6 +1,6 @@
 [package]
 name = "macntfs"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2024"
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -11,6 +11,8 @@ tauri-plugin-process = "2"
 macntfs-core = { path = ".." }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+tempfile = "3"
 
 [dev-dependencies]
 base64 = "0.22"

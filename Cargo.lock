@@ -1841,7 +1841,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "macntfs"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "base64 0.22.1",
  "macntfs-core",
@@ -1852,11 +1852,12 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-process",
  "tauri-plugin-updater",
+ "tempfile",
 ]
 
 [[package]]
 name = "macntfs-core"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "libc",
  "plist",
