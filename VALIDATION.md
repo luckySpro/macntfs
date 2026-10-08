@@ -124,3 +124,6 @@
 - npm build、13 项核心测试、cargo clippy --workspace --all-targets -- -D warnings、git diff --check 通过。
 - 隔离 UI 回归：三种主题卡片切换与保存、主窗口布局、菜单栏按钮参数、多设备滚动、忙碌和失败反馈通过。三个主题的面板四角 alpha=0；透明仅作用于面板文档。
 - Tauri macOS 透明窗口启用并编译；原生 CUA 检查主窗口与面板。CUA RGB 截图不保留透明 alpha，桌面合成颜色未独立测量。未操作真实磁盘。
+- 完整 PKG 校验通过：原始上游组件、文件签名、载荷哈希、root 权限与动态库依赖。两个更新清单的版本签名与篡改拒绝通过。
+- GitHub v0.3.10 的 9 项资产哈希与本地一致；模拟 v0.3.9 客户端使用真实 Tauri updater 检测 v0.3.10、下载完整 PKG、验证签名，结果与本地包逐字节一致；未执行安装。
+- 测试应用和打包应用副本移入废纸篓并取消 LaunchServices 注册，保留 /Applications/macntfs.app。
