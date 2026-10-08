@@ -26,6 +26,7 @@ pub struct Environment {
     pub os: String,
     pub runtime_issue: String,
     pub service: bool,
+    pub service_issue: String,
 }
 pub fn resources() -> Option<PathBuf> {
     let executable = std::env::current_exe().ok()?;
@@ -43,6 +44,7 @@ pub fn environment() -> Environment {
             Err("读写组件版本需要更新，请点击安装组件".into())
         }
     });
+    let service = crate::daemon::request("status", "", "", "");
     let version = Value::from_file("/Library/Filesystems/macfuse.fs/Contents/version.plist")
         .ok()
         .and_then(|v| {
@@ -63,7 +65,8 @@ pub fn environment() -> Environment {
             .trim()
             .into(),
         runtime_issue: check.err().unwrap_or_default(),
-        service: crate::daemon::ready(),
+        service: service.is_ok(),
+        service_issue: service.err().unwrap_or_default(),
     }
 }
 pub fn run(program: &str, args: &[&str]) -> Result<String> {

@@ -123,7 +123,11 @@ pub fn request(action: &str, id: &str, uuid: &str, backend: &str) -> Result<Stri
     let result: Response =
         serde_json::from_slice(&read_message(&mut stream)?).map_err(|e| e.to_string())?;
     if result.version != env!("CARGO_PKG_VERSION") {
-        return Err("后台助手版本需要更新，请安装新版组件".into());
+        return Err(format!(
+            "应用版本 {} 与后台助手版本 {} 不一致，请安装对应版本并重新启动应用",
+            env!("CARGO_PKG_VERSION"),
+            result.version
+        ));
     }
     if result.ok {
         Ok(result.message)
