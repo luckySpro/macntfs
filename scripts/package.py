@@ -32,6 +32,10 @@ files = ['bin/ntfs-3g','bin/ntfs-3g.probe','bin/ntfs-helper','lib/libfuse.2.dyli
 packages = build/'packages'; packages.mkdir()
 scripts = build/'runtime-scripts'; scripts.mkdir()
 shutil.copy2(root/'scripts/runtime-preinstall',scripts/'preinstall')
+shutil.copy2(root/'scripts/runtime-postinstall',scripts/'postinstall')
+daemons = build/'runtime-root/Library/LaunchDaemons'; daemons.mkdir(parents=True)
+with (daemons/'com.macntfs.helper.plist').open('wb') as stream:
+    plistlib.dump({'Label':'com.macntfs.helper', 'ProgramArguments':['/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper','serve'], 'RunAtLoad':True, 'KeepAlive':True, 'AbandonProcessGroup':True, 'AssociatedBundleIdentifiers':['com.yuntu.ntfs-desktop'], 'ProcessType':'Background', 'ThrottleInterval':10, 'StandardErrorPath':'/Library/Application Support/NTFS Desktop/Runtime/service.log', 'StandardOutPath':'/Library/Application Support/NTFS Desktop/Runtime/service.log'},stream)
 run('/usr/bin/pkgbuild','--root',build/'runtime-root','--identifier','com.yuntu.ntfs-desktop.runtime','--version',version,'--ownership','recommended','--scripts',scripts,packages/'OfflineRuntime.pkg')
 app = dist/'macntfs.app'
 if app.exists(): shutil.rmtree(app)
@@ -71,7 +75,7 @@ info = {
     'NSRemovableVolumesUsageDescription':'识别和挂载用户选择的外置 NTFS 磁盘。'
 }
 with (app/'Contents/Info.plist').open('wb') as f: plistlib.dump(info,f)
-options = ['--options','runtime','--timestamp'] if identity != '-' else []
+options = ['--options','runtime'] + (['--timestamp'] if identity != '-' else [])
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
 run('/usr/bin/codesign','--verify','--deep','--strict',app)
 app_root = build/'app-root/Applications'; app_root.mkdir(parents=True)
@@ -86,7 +90,10 @@ shutil.rmtree(app_root/app.name); shutil.copytree(app,app_root/app.name)
 # Bundle relocation is disabled: the privileged helper trusts a fixed root path.
 components = [{'RootRelativeBundlePath':'Applications/macntfs.app','BundleIsRelocatable':False,'BundleIsVersionChecked':True,'BundleHasStrictIdentifier':True,'BundleOverwriteAction':'upgrade'}]
 with (build/'components.plist').open('wb') as f: plistlib.dump(components,f)
-run('/usr/bin/pkgbuild','--root',build/'app-root','--component-plist',build/'components.plist','--identifier','com.yuntu.ntfs-desktop.application','--version',version,'--ownership','recommended',packages/'Application.pkg')
+app_scripts = build/'app-scripts'; app_scripts.mkdir()
+(app_scripts/'preinstall').write_text('#!/bin/bash\nset -euo pipefail\nif [ -L /Applications ] || [ -L /Applications/macntfs.app ]; then echo "Unsafe application path" >&2; exit 1; fi\nif [ -d /Applications/macntfs.app ] && /usr/bin/find /Applications/macntfs.app -type l -print -quit | /usr/bin/grep -q .; then echo "Application bundle contains symbolic links" >&2; exit 1; fi\n')
+(app_scripts/'preinstall').chmod(0o755)
+run('/usr/bin/pkgbuild','--scripts',app_scripts,'--root',build/'app-root','--component-plist',build/'components.plist','--identifier','com.yuntu.ntfs-desktop.application','--version',version,'--ownership','recommended',packages/'Application.pkg')
 # Combine the official macFUSE components without changing their code-signed
 # payload or scripts. The wrapper itself needs our Developer ID Installer for
 # public distribution; the complete original vendor-signed PKG is also kept.
@@ -98,7 +105,7 @@ welcome = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sa
 (installer_resources/'Welcome.html').write_text(welcome)
 license_text = '\n\n'.join((root/'vendor/licenses'/f).read_text() for f in ['macfuse-LICENSE.txt','ntfs-3g-GPL.txt','ntfs-3g-LGPL.txt'])
 (installer_resources/'License.html').write_text('<html><meta charset="utf-8"><body><h2>macntfs · 免费开源</h2><p>应用代码采用 MIT 许可。驱动保留各自许可，源码随包附带。macFUSE 的商业捆绑需另行取得授权。</p><pre style="white-space:pre-wrap;font-size:11px">'+html.escape(license_text)+'</pre></body></html>')
-conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，连接外置 NTFS 磁盘并选择「开启读写」。</p><p>如 macOS 提示允许文件系统扩展或重启，请先完成系统步骤。</p></body></html>'
+conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，菜单栏会实时检测外置 NTFS 磁盘并自动开启读写。安装后台助手后日常挂载无需重复输入密码。</p><p>如 macOS 提示允许文件系统扩展或重启，请先完成系统步骤。</p></body></html>'
 (installer_resources/'Conclusion.html').write_text(conclusion)
 tree = ET.parse(root/'vendor/macfuse-expanded/Distribution'); distribution = tree.getroot()
 distribution.find('title').text = 'macntfs'

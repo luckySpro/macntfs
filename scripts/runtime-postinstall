@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+/bin/rm -f /var/run/com.macntfs.updating
+/bin/launchctl enable system/com.macntfs.helper
+/bin/launchctl bootstrap system /Library/LaunchDaemons/com.macntfs.helper.plist

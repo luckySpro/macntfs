@@ -51,3 +51,14 @@ python3 scripts/validate-package.py
 macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch`。`scripts/test-probe-permission.py` 在临时文件上注入 EPERM，验证返回访问失败 19 而不是休眠 14，不操作真实磁盘。
 
 应用显示名称、安装包及下载文件统一为 `macntfs`。为兼容已安装版本，Bundle ID 和权限助手的历史安装路径保持一致。
+
+
+## 菜单栏与自动读写（0.3.5）
+
+从完整 PKG 安装后，从「应用程序」打开 macntfs。菜单栏实时显示 NTFS 磁盘，默认在插入后自动检查并开启读写；可在菜单栏或设置关闭自动读写。关闭主窗口会保留菜单栏，退出应用会停止检测。后台助手不会强行结束已经挂载的驱动。
+
+首次安装需系统管理员授权，以及 macOS 要求的磁盘访问许可。后续挂载通过系统管理的 root 助手执行，无需每次输入密码。安装窗口是否提供 Touch ID 由 macOS 决定，不修改 sudo、认证数据库或保存管理员密码。暂未设置自动登录启动，需要登录后打开一次应用。
+
+安全边界：launchd root 助手仅提供状态检查和 NTFS 安全挂载，限制当前控制台用户、固定 /Applications/macntfs.app 路径、root 所有权和不可写应用文件、进程审计令牌与 Hardened Runtime 签名。开发目录中的 GUI、任意脚本和其他应用不能调用后台挂载。自动挂载失败会保留诊断，仅在重新插入或明确操作时重试。
+
+0.3.5 起，应用自更新后需安装对应版本的完整 PKG，同步助手版本并恢复 root 所有权；仅安装内置 Runtime 不足以恢复自更新后的应用权限。日常磁盘挂载免密码，软件升级仍需系统安装授权。

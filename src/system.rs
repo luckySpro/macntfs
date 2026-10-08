@@ -25,6 +25,7 @@ pub struct Environment {
     pub fuse_version: String,
     pub os: String,
     pub runtime_issue: String,
+    pub service: bool,
 }
 pub fn resources() -> Option<PathBuf> {
     let executable = std::env::current_exe().ok()?;
@@ -62,6 +63,7 @@ pub fn environment() -> Environment {
             .trim()
             .into(),
         runtime_issue: check.err().unwrap_or_default(),
+        service: crate::daemon::ready(),
     }
 }
 pub fn run(program: &str, args: &[&str]) -> Result<String> {
@@ -180,27 +182,6 @@ fn fresh(v: &Volume) -> Result<Volume> {
 pub fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
-fn apple_quote(s: &str) -> String {
-    format!(
-        "\"{}\"",
-        s.replace('\\', "\\\\")
-            .replace('"', "\\\"")
-            .replace('\n', "\\n")
-            .replace('\r', "\\r")
-    )
-}
-fn authorized(command: &str) -> Result<String> {
-    run(
-        "/usr/bin/osascript",
-        &[
-            "-e",
-            &format!(
-                "do shell script {} with administrator privileges",
-                apple_quote(command)
-            ),
-        ],
-    )
-}
 pub fn mount(v: &Volume, backend: crate::settings::Backend) -> Result<String> {
     let v = fresh(v)?;
     if v.writable && !v.mount.is_empty() {
@@ -215,26 +196,9 @@ pub fn mount(v: &Volume, backend: crate::settings::Backend) -> Result<String> {
     }
     crate::privileged::verify_runtime(Path::new(RUNTIME))?;
     let mode = backend.resolved(&env.os)?;
-    let command = format!(
-        "{} mount {} {} {}",
-        shell_quote(&format!("{RUNTIME}/bin/ntfs-helper")),
-        shell_quote(&v.id),
-        shell_quote(&v.uuid),
-        shell_quote(mode)
-    );
-    let response = authorized(&command)?;
-    let value: serde_json::Value =
-        serde_json::from_str(response.trim()).map_err(|_| "助手版本不匹配，请重新安装组件")?;
-    let message = value["message"]
-        .as_str()
-        .unwrap_or("助手响应无效")
-        .to_owned();
-    if value["ok"].as_bool() == Some(true) {
-        Ok(message)
-    } else {
-        Err(message)
-    }
+    crate::daemon::request("mount", &v.id, &v.uuid, mode)
 }
+
 pub fn eject(v: &Volume) -> Result<String> {
     let v = fresh(v)?;
     let parent = v
@@ -274,6 +238,14 @@ pub fn reveal_permission_helper() -> Result<String> {
     }
     run("/usr/bin/open", &["-R", &path.to_string_lossy()])?;
     Ok("已在 Finder 选中 ntfs-helper。请将它添加到「完整磁盘访问」列表并开启授权。".into())
+}
+
+pub fn open_release() -> Result<String> {
+    run(
+        "/usr/bin/open",
+        &["https://github.com/luckySpro/macntfs/releases/latest"],
+    )?;
+    Ok("已打开 GitHub 完整安装包下载页。下载 PKG 后完成系统安装。".into())
 }
 
 pub fn install() -> Result<String> {
@@ -334,7 +306,6 @@ mod tests {
     #[test]
     fn quotes_are_literal() {
         assert_eq!(shell_quote("a'b $(id)"), "'a'\\''b $(id)'");
-        assert_eq!(apple_quote("a\"\\b"), "\"a\\\"\\\\b\"");
     }
     #[test]
     fn rejects_internal_and_non_ntfs() {

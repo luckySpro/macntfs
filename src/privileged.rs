@@ -11,7 +11,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-fn check_root_path(path: &Path) -> Result<()> {
+pub(crate) fn check_root_path(path: &Path) -> Result<()> {
     if !path.is_absolute() {
         return Err("组件路径必须为绝对路径".into());
     }
@@ -24,6 +24,22 @@ fn check_root_path(path: &Path) -> Result<()> {
                 component.display()
             ));
         }
+    }
+    Ok(())
+}
+// Client bundle descendants must be immutable to ordinary users. /Applications
+// itself is root-owned and admin-writable on macOS; validate it separately.
+pub(crate) fn check_root_path_until_app(path: &Path) -> Result<()> {
+    let meta = fs::symlink_metadata(path).map_err(|e| e.to_string())?;
+    if meta.file_type().is_symlink() || meta.uid() != 0 || meta.mode() & 0o022 != 0 {
+        return Err("已安装应用权限不安全，请使用 PKG 重新安装".into());
+    }
+    let applications = fs::symlink_metadata("/Applications").map_err(|e| e.to_string())?;
+    if applications.file_type().is_symlink()
+        || applications.uid() != 0
+        || applications.mode() & 0o002 != 0
+    {
+        return Err("应用程序目录权限不安全".into());
     }
     Ok(())
 }

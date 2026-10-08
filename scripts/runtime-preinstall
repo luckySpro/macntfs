@@ -9,3 +9,12 @@ for ntfs_path in '/Library' '/Library/Application Support' '/Library/Application
     (( (8#$ntfs_mode & 8#022) == 0 )) || { echo 'Unsafe runtime path: writable by other users' >&2; exit 1; }
   fi
 done
+
+# Stop accepting mounts before replacing executable files. Refuse an in-flight mount.
+/usr/bin/touch /var/run/com.macntfs.updating
+if /usr/sbin/lsof -t /var/run/com.macntfs.mount-active >/dev/null 2>&1; then
+  /bin/rm -f /var/run/com.macntfs.updating
+  echo 'macntfs is mounting a disk. Wait for completion and retry.' >&2
+  exit 1
+fi
+/bin/launchctl bootout system/com.macntfs.helper >/dev/null 2>&1 || true

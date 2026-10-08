@@ -39,10 +39,21 @@ pub fn supports_fskit(os: &str) -> bool {
         _ => false,
     }
 }
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     pub backend: Backend,
     pub dark: bool,
+    pub auto_mount: bool,
+}
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            backend: Backend::Auto,
+            dark: false,
+            auto_mount: true,
+        }
+    }
 }
 pub fn data_dir() -> PathBuf {
     std::env::var_os("HOME")

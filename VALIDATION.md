@@ -55,3 +55,14 @@
 来源：https://github.com/tuxera/ntfs-3g/wiki/Using-Extended-Attributes 与 https://github.com/macfuse/macfuse/wiki/Mount-Options 。
 
 0.3.4 安装后实盘复测通过：正式 GUI 启动已安装的 root 助手，实际驱动参数为 streams_interface=openxattr、原卷名及系统 External.icns。Finder 实际显示原问题目录的 5 个普通文件；卷简介截图确认原名称与橙色系统外置磁盘图标。实盘虚拟图标字节与系统资源一致，根目录 FinderInfo 包含 0x0400 标记，已安装助手与驱动的哈希符合 0.3.4 清单。验证过程中未向实盘创建测试文件或写入图标文件。
+
+
+## 0.3.5 菜单栏与后台助手
+
+本机 Rust 12 项测试、Clippy（-D warnings）、前端生产构建、离线 release 构建通过。PKG 校验确认 launchd 配置、GUI Hardened Runtime、root 所有权、离线组件及既有驱动签名/哈希。
+
+用户通过系统安装器安装后台组件后，实际 launchd 服务以 root 运行。普通 Python 进程发送状态/挂载请求均在身份检查阶段被拒绝，未执行磁盘操作。开发目录 GUI 可扫描真实 BackUp 的现有可读写挂载；关闭窗口后 GUI 进程继续运行。
+
+正式应用尚未安装到 /Applications，本轮尚未完成受信任 GUI 的免密码挂载、物理拔插后自动挂载和菜单栏交互的完整实机验证。已将系统安装器交给用户完成安装；不把现有 0.3.4 的可写挂载算作新版自动挂载成功。Touch ID 是否出现由系统安装器决定，本轮未验证指纹授权。
+
+应用自更新会改变应用文件所有权，必须安装对应完整 PKG，同步助手并恢复 root 权限；GUI 已显示引导，未宣称 root 助手可无授权自动升级。

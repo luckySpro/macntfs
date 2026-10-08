@@ -26,6 +26,17 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     for line in (payload/'SHA256SUMS').read_text().splitlines():
         digest,name=line.split('  ',1); assert sha(payload/name)==digest,name; names.append(name)
     assert len(names)==4
+    service_plist=root/'dist/package-build/runtime-root/Library/LaunchDaemons/com.macntfs.helper.plist'
+    service=plistlib.loads(service_plist.read_bytes())
+    assert service['ProgramArguments']==['/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper','serve']
+    assert service['AbandonProcessGroup'] is True and service['RunAtLoad'] is True
+    service_bom=command('/usr/bin/lsbom','-p','fmu',expanded/'OfflineRuntime.pkg/Bom').decode().splitlines()
+    service_item=next(line for line in service_bom if line.split('\t')[0].endswith('/LaunchDaemons/com.macntfs.helper.plist'))
+    assert service_item.split('\t')[1:]==['100644','0'],service_item
+    assert (expanded/'OfflineRuntime.pkg/Scripts/postinstall').is_file()
+    flags=subprocess.run(['/usr/bin/codesign','-dvv',str(app)],capture_output=True,text=True,check=True).stderr
+    assert any('flags=' in line and 'runtime' in line for line in flags.splitlines()),'GUI must enable hardened runtime before privileged IPC'
+
     executable=app/'Contents/MacOS/macntfs'
     for binary in [executable,*[payload/name for name in names]]:
         command('/usr/bin/codesign','--verify','--strict',binary)
@@ -42,6 +53,10 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     for name in names:
         item=next(line for line in bom if line.split('\t')[0].endswith('/Runtime/'+name))
         _,mode,uid=item.split('\t'); assert uid=='0' and mode=='100755',item
+    app_bom=command('/usr/bin/lsbom','-p','fmu',expanded/'Application.pkg/Bom').decode().splitlines()
+    for suffix in ['/macntfs.app','/macntfs.app/Contents','/macntfs.app/Contents/MacOS','/macntfs.app/Contents/MacOS/macntfs']:
+        item=next(line for line in app_bom if line.split('\t')[0].endswith(suffix))
+        _,mode,uid=item.split('\t'); assert uid=='0' and int(mode,8) & 0o022 == 0,item
     choices=plistlib.loads(command('/usr/sbin/installer','-showChoicesXML','-pkg',package,'-target','/'))
     def flatten(items):
         for item in items:
@@ -53,7 +68,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     report={
         'package':package.name,'sha256':sha(package),'size_bytes':package.stat().st_size,
         'embedded_components':sorted(refs),'payload_hashes_verified':names,
-        'root_runtime_permissions_verified':True,'vendor_components_unchanged':True,
+        'launchdaemon_and_gui_hardened_runtime_verified':True,'root_runtime_permissions_verified':True,'vendor_components_unchanged':True,
         'vendor_team_id':'3T5GSNBU6W','runtime_homebrew_library_dependency':False,
         'remote_package_downloads':False,
         'clean_machine_offline_install_tested':False,'developer_id_notarized':False,
