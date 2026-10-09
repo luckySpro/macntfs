@@ -133,3 +133,6 @@
 - 13 项核心测试与 cargo clippy --workspace --all-targets -- -D warnings 通过。
 - 原生 CUA 验证三种主题切换、标题栏颜色采样、重启恢复深色风格；标题栏背景与画布颜色误差不超过 2。
 - 保留原生标题栏、关闭/最小化/全屏控件；本次没有磁盘操作。
+- 界面回归、npm build、git diff --check 通过；完整安装包权限/依赖/载荷校验与两个版本签名清单验证通过。
+- GitHub v0.3.11 的 9 项资产哈希一致；真实 Tauri updater 模拟 v0.3.10 客户端成功发现新版、下载完整 PKG、验证版本签名，文件与本地逐字节一致；未安装。
+- 测试应用和打包副本移入废纸篓，正式 /Applications/macntfs.app 保留。
