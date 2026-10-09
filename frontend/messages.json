@@ -1165,14 +1165,14 @@
     "zh-Hant" : "無法確認讀寫服務已退出，已停止更新"
   },
   "已开启读写：微虚拟机实验模式" : {
-    "en" : "Writing enabled: experimental microVM",
-    "ja" : "読み書き有効：実験的マイクロ VM",
+    "en" : "Read/write enabled: experimental MicroVM mode",
+    "ja" : "読み書きが有効です：実験的 MicroVM モード",
     "zh-Hant" : "已開啟讀寫：微虛擬機實驗模式"
   },
   "磁盘仍在使用，已停止推出。请关闭文件后重试" : {
-    "en" : "Disk still in use. Close files before safely ejecting.",
-    "ja" : "ディスクが使用中です。ファイルを閉じてから取り出してください。",
-    "zh-Hant" : "磁碟仍在使用，已停止退出。請關閉檔案後重試"
+    "en" : "Disk is still in use. Eject stopped. Close open files and retry.",
+    "ja" : "ディスクは使用中です。取り出しを停止しました。開いているファイルを閉じて再試行してください。",
+    "zh-Hant" : "磁碟仍在使用，已停止推出。請關閉檔案後重試"
   },
   "微虚拟机需要 Apple Silicon 和 macOS 13 或更新版本" : {
     "en" : "MicroVM requires Apple Silicon and macOS 13 or later.",
@@ -1193,5 +1193,25 @@
     "en" : "Offline image is present; integrity and read/write access are checked when mounting.",
     "ja" : "オフラインイメージはあります。整合性と読み書きはマウント時に検証します。",
     "zh-Hant" : "離線映像已提供；完整性與讀寫將在掛載時驗證"
+  },
+  "微虚拟机操作失败。请检查磁盘访问权限并运行诊断；未强行恢复或卸载磁盘。" : {
+    "en" : "MicroVM operation failed. Check disk access and run diagnostics. The disk was not forcibly recovered or unmounted.",
+    "ja" : "MicroVM 操作に失敗しました。ディスクへのアクセス権を確認して診断を実行してください。強制復旧や強制アンマウントは行っていません。",
+    "zh-Hant" : "微虛擬機操作失敗。請檢查磁碟存取權限並執行診斷；未強行恢復或卸載磁碟。"
+  },
+  "微虚拟机仍在等待系统响应。未强行结束磁盘读写；请运行诊断后安全推出。" : {
+    "en" : "The MicroVM is waiting for the system. Disk I/O was not forcibly stopped. Run diagnostics, then eject safely.",
+    "ja" : "MicroVM はシステムの応答を待っています。ディスクの読み書きを強制終了していません。診断してから安全に取り出してください。",
+    "zh-Hant" : "微虛擬機仍在等待系統回應。未強行結束磁碟讀寫；請執行診斷後安全推出。"
+  },
+  "尚未确认微虚拟机读写挂载，请运行诊断" : {
+    "en" : "MicroVM read/write mounting has not been confirmed. Run diagnostics.",
+    "ja" : "MicroVM の読み書きマウントは未確認です。診断を実行してください。",
+    "zh-Hant" : "尚未確認微虛擬機讀寫掛載，請執行診斷"
+  },
+  "组件正在更新，请稍后重新连接磁盘" : {
+    "en" : "Components are updating. Reconnect the disk after the update.",
+    "ja" : "コンポーネントを更新中です。更新後にディスクを接続し直してください。",
+    "zh-Hant" : "元件正在更新，請稍後重新連接磁碟"
   }
 }
