@@ -31,12 +31,17 @@ struct Snapshot {
     version: &'static str,
     monitor: Monitor,
     required_update: Option<updates::Available>,
+    update_blockers: usize,
 }
 #[tauri::command]
 async fn snapshot(app: tauri::AppHandle) -> Result<Snapshot, String> {
     tauri::async_runtime::spawn_blocking(move || {
         Ok(Snapshot {
             required_update: updates::required(&app),
+            update_blockers: macntfs_core::sessions::managed_mounts(
+                &macntfs_core::sessions::mount_table()?,
+            )
+            .len(),
             volumes: system::scan()?,
             environment: system::environment(),
             settings: Settings::load(),
@@ -57,6 +62,7 @@ fn operation(
     backend: Backend,
 ) -> Result<String, String> {
     match action {
+        "diagnostics-export" => macntfs_core::diagnostics::export(),
         "mount" => system::mount(&volume.ok_or("请选择磁盘")?, backend),
         "eject" => system::eject(&volume.ok_or("请选择磁盘")?),
         "open" => system::open_volume(&volume.ok_or("请选择磁盘")?),
@@ -109,6 +115,12 @@ async fn operate(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn diagnose() -> Result<macntfs_core::diagnostics::Report, String> {
+    tauri::async_runtime::spawn_blocking(macntfs_core::diagnostics::collect)
+        .await
+        .map_err(|e| e.to_string())
 }
 #[derive(Default)]
 struct SettingsState(Mutex<()>);
@@ -440,7 +452,11 @@ fn start_monitor(app: tauri::AppHandle) {
                 if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
                     monitor.volumes = volumes.clone();
                 }
-                if settings.auto_mount && ready && updates::required(&app).is_none() {
+                if settings.auto_mount
+                    && settings.backend != Backend::Microvm
+                    && ready
+                    && updates::required(&app).is_none()
+                {
                     for volume in &volumes {
                         if (!volume.writable || volume.mount.is_empty())
                             && !attempted.contains(&volume.uuid)
@@ -592,6 +608,7 @@ fn main() {
             save_settings,
             panel_action,
             set_auto_mount,
+            diagnose,
             updates::check_updates,
             updates::install_update
         ])

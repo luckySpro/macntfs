@@ -104,8 +104,10 @@ pub fn request(action: &str, id: &str, uuid: &str, backend: &str) -> Result<Stri
     stream
         .set_read_timeout(Some(Duration::from_secs(if action == "status" {
             5
+        } else if backend == "microvm" {
+            120
         } else {
-            45
+            90
         })))
         .map_err(|e| e.to_string())?;
     stream
@@ -269,6 +271,40 @@ fn dispatch(req: Request, lock: &Mutex<()>) -> Result<String> {
         "status" if req.id.is_empty() && req.uuid.is_empty() && req.backend.is_empty() => {
             Ok("后台助手已就绪".into())
         }
+        "update-check" | "prepare-update" | "cancel-update"
+            if req.id.is_empty() && req.uuid.is_empty() && req.backend.is_empty() =>
+        {
+            let _guard = lock.lock().map_err(|_| "后台挂载锁不可用")?;
+            if req.action == "cancel-update" {
+                let _ = fs::remove_file("/var/run/com.macntfs.updating");
+                return Ok("已恢复设备检测".into());
+            }
+            privileged::ensure_update_safe()?;
+            if req.action == "prepare-update" {
+                use std::os::unix::fs::OpenOptionsExt;
+                fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .mode(0o600)
+                    .custom_flags(libc::O_NOFOLLOW)
+                    .open("/var/run/com.macntfs.updating")
+                    .map_err(|e| e.to_string())?;
+            }
+            Ok("磁盘已安全卸载，可以更新".into())
+        }
+        "eject" if req.backend.is_empty() => {
+            let _guard = lock.lock().map_err(|_| "后台挂载锁不可用")?;
+            let _active = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .mode(0o600)
+                .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+                .open("/var/run/com.macntfs.mount-active")
+                .map_err(|e| e.to_string())?;
+            privileged::eject(&req.id, &req.uuid)
+        }
         "mount" => {
             let _guard = lock.lock().map_err(|_| "后台挂载锁不可用")?;
             let active = fs::OpenOptions::new()
@@ -282,12 +318,18 @@ fn dispatch(req: Request, lock: &Mutex<()>) -> Result<String> {
             if active.metadata().map_err(|e| e.to_string())?.uid() != 0 {
                 return Err("后台挂载锁权限不安全".into());
             }
-            if Path::new("/var/run/com.macntfs.updating").exists() {
+            if let Ok(meta) = fs::metadata("/var/run/com.macntfs.updating")
+                && meta
+                    .modified()
+                    .ok()
+                    .and_then(|t| t.elapsed().ok())
+                    .is_some_and(|age| age < Duration::from_secs(300))
+            {
                 return Err("组件正在更新，请稍后重新连接磁盘".into());
             }
             privileged::execute(vec!["mount".into(), req.id, req.uuid, req.backend])
         }
-        _ => Err("后台助手仅允许状态检查和安全 NTFS 挂载".into()),
+        _ => Err("后台助手仅允许状态检查、安全挂载、推出和更新检查".into()),
     }
 }
 pub fn serve() -> Result<()> {

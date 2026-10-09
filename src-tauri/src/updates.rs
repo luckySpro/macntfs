@@ -113,19 +113,42 @@ pub async fn check_updates(
     *pending.0.lock().map_err(|_| "更新状态不可用")? = update;
     Ok(available)
 }
+struct UpdateOperation {
+    app: tauri::AppHandle,
+    reserved: bool,
+}
+impl Drop for UpdateOperation {
+    fn drop(&mut self) {
+        if self.reserved {
+            let _ = macntfs_core::daemon::request("cancel-update", "", "", "");
+        }
+        if let Ok(mut monitor) = self.app.state::<Mutex<super::Monitor>>().lock() {
+            monitor.busy = false;
+        }
+        let _ = self.app.emit("devices-changed", ());
+    }
+}
 #[tauri::command]
 pub async fn install_update(
     app: tauri::AppHandle,
     pending: tauri::State<'_, Pending>,
 ) -> Result<(), String> {
-    if app
-        .state::<Mutex<super::Monitor>>()
-        .lock()
-        .map_err(|e| e.to_string())?
-        .busy
     {
-        return Err("Wait for the current disk operation before updating".into());
+        let state = app.state::<Mutex<super::Monitor>>();
+        let mut monitor = state.lock().map_err(|e| e.to_string())?;
+        if monitor.busy {
+            return Err("Wait for the current disk operation before updating".into());
+        }
+        monitor.busy = true;
     }
+    let mut operation = UpdateOperation {
+        app: app.clone(),
+        reserved: false,
+    };
+    let _ = app.emit("devices-changed", ());
+    tauri::async_runtime::spawn_blocking(macntfs_core::privileged::ensure_update_safe)
+        .await
+        .map_err(|e| e.to_string())??;
     if pending
         .0
         .lock()
@@ -163,6 +186,18 @@ pub async fn install_update(
     file.write_all(&bytes).map_err(|e| e.to_string())?;
     file.as_file().sync_all().map_err(|e| e.to_string())?;
     let (_, path) = file.keep().map_err(|e| e.to_string())?;
+    // Recheck after download. Reserve the helper transaction before Installer opens.
+    tauri::async_runtime::spawn_blocking(|| {
+        macntfs_core::privileged::ensure_update_safe()?;
+        if macntfs_core::daemon::ready() {
+            macntfs_core::daemon::request("prepare-update", "", "", "").map(|_| ())
+        } else {
+            Ok(())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    operation.reserved = true;
     let result = std::process::Command::new("/usr/bin/open")
         .args(["-a", "Installer"])
         .arg(&path)
@@ -172,6 +207,7 @@ pub async fn install_update(
         return Err("无法打开系统安装器，请重试".into());
     }
     // Do not keep an old GUI alive while Installer replaces its app bundle.
+    operation.reserved = false;
     app.exit(0);
     Ok(())
 }

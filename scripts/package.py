@@ -26,7 +26,23 @@ for binary in [runtime/'bin/ntfs-3g',runtime/'bin/ntfs-3g.probe',runtime/'bin/nt
     run('/usr/bin/codesign','--force','--sign',identity,*options,binary)
 # Preserve libfuse's vendor signature. Do not re-sign or modify its contents.
 run('/usr/bin/codesign','--verify','--strict',runtime/'lib/libfuse.2.dylib')
-files = ['bin/ntfs-3g','bin/ntfs-3g.probe','bin/ntfs-helper','lib/libfuse.2.dylib']
+# MicroVM is always bundled, but never selected automatically.
+microvm = runtime/'MicroVM'
+if not (root/'vendor/microvm/bin/anylinuxfs').is_file(): raise SystemExit('Build the offline microVM payload with scripts/build-microvm.py first')
+run('/usr/bin/ditto','--extattr',root/'vendor/microvm',microvm)
+run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime','--entitlements',root/'scripts/microvm.entitlements',microvm/'bin/anylinuxfs')
+run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime',microvm/'libexec/gvproxy')
+# Linux files retain guest symlinks; hash links themselves rather than following them.
+vm_entries=[]
+for parent,dirs,names in os.walk(microvm):
+    for name in dirs+names:
+        path=pathlib.Path(parent)/name
+        rel=path.relative_to(microvm).as_posix()
+        if rel=='SHA256SUMS' or rel.startswith('profile/logs/'): continue
+        if path.is_symlink(): vm_entries.append((rel,'L',hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()))
+        elif path.is_file(): vm_entries.append((rel,'F',digest(path)))
+(microvm/'SHA256SUMS').write_text(''.join(f'{sha}  {kind} {name}\n' for name,kind,sha in sorted(vm_entries)))
+files = ['bin/ntfs-3g','bin/ntfs-3g.probe','bin/ntfs-helper','lib/libfuse.2.dylib','MicroVM/SHA256SUMS']
 (runtime/'VERSION').write_text(version+'\n')
 (runtime/'SHA256SUMS').write_text(''.join(f'{digest(runtime/f)}  {f}\n' for f in files))
 packages = build/'packages'; packages.mkdir()
@@ -42,14 +58,17 @@ if app.exists(): shutil.rmtree(app)
 (app/'Contents/MacOS').mkdir(parents=True)
 resources = app/'Contents/Resources'; resources.mkdir()
 shutil.copy2(root/'target/release/macntfs',app/'Contents/MacOS/macntfs')
-shutil.copytree(runtime,resources/'Runtime')
+# Guest absolute symlinks belong only in the installed runtime, never in a signed app.
+shutil.copytree(runtime,resources/'Runtime',ignore=shutil.ignore_patterns('MicroVM'))
+(resources/'Runtime/MicroVM').mkdir()
+shutil.copy2(microvm/'SHA256SUMS',resources/'Runtime/MicroVM/SHA256SUMS')
 (resources/'Installers').mkdir()
 shutil.copy2(packages/'OfflineRuntime.pkg',resources/'Installers/OfflineRuntime.pkg')
 shutil.copy2(root/'vendor/downloads/Install macFUSE.pkg',resources/'Installers/Install macFUSE.pkg')
 shutil.copytree(root/'vendor/licenses',resources/'Licenses')
 shutil.copy2(root/'vendor/macfuse-expanded/Resources/License.rtf',resources/'Licenses/macFUSE-Installer-License.rtf')
 (resources/'Sources').mkdir()
-for name in ['ntfs-3g-2026.9.28.tar.gz','macfuse-library-7a6cdd2.tar.gz']:
+for name in ['ntfs-3g-2026.9.28.tar.gz','macfuse-library-7a6cdd2.tar.gz','anylinuxfs-8aa9ccd.tar.gz']:
     shutil.copy2(root/'vendor/downloads'/name,resources/'Sources'/name)
 shutil.copy2(root/'vendor/manifest.json',resources/'Sources/manifest.json')
 # Collect notices for compiled Rust dependencies from locally cached crates.
@@ -79,14 +98,14 @@ options = ['--options','runtime'] + (['--timestamp'] if identity != '-' else [])
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
 run('/usr/bin/codesign','--verify','--deep','--strict',app)
 app_root = build/'app-root/Applications'; app_root.mkdir(parents=True)
-shutil.copytree(app,app_root/app.name)
+run('/usr/bin/ditto','--extattr',app,app_root/app.name)
 # Include current application source and reproducible driver build instructions.
 with tarfile.open(resources/f'Sources/macntfs-{version}-source.tar.gz','w:gz') as archive:
-    for path in ['frontend','src-tauri','package.json','package-lock.json','vite.config.js','VERSION','src','scripts','Cargo.toml','Cargo.lock','README.md','VALIDATION.md','LICENSE','vendor/manifest.json','vendor/licenses']:
+    for path in ['frontend','src-tauri','package.json','package-lock.json','vite.config.js','VERSION','src','scripts','THIRD_PARTY_MICROVM.md','Cargo.toml','Cargo.lock','README.md','VALIDATION.md','LICENSE','vendor/manifest.json','vendor/licenses']:
         archive.add(root/path,arcname=f'macntfs/{path}')
 # Re-sign after adding the source archive and recreate the staged copy.
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
-shutil.rmtree(app_root/app.name); shutil.copytree(app,app_root/app.name)
+shutil.rmtree(app_root/app.name); run('/usr/bin/ditto','--extattr',app,app_root/app.name)
 # Bundle relocation is disabled: the privileged helper trusts a fixed root path.
 components = [{'RootRelativeBundlePath':'Applications/macntfs.app','BundleIsRelocatable':False,'BundleIsVersionChecked':True,'BundleHasStrictIdentifier':True,'BundleOverwriteAction':'upgrade'}]
 with (build/'components.plist').open('wb') as f: plistlib.dump(components,f)
@@ -94,6 +113,11 @@ app_scripts = build/'app-scripts'; app_scripts.mkdir()
 (app_scripts/'preinstall').write_text('#!/bin/bash\nset -euo pipefail\nif [ -L /Applications ] || [ -L /Applications/macntfs.app ]; then echo "Unsafe application path" >&2; exit 1; fi\nif [ -d /Applications/macntfs.app ] && /usr/bin/find /Applications/macntfs.app -type l -print -quit | /usr/bin/grep -q .; then echo "Application bundle contains symbolic links" >&2; exit 1; fi\n')
 (app_scripts/'preinstall').chmod(0o755)
 run('/usr/bin/pkgbuild','--scripts',app_scripts,'--root',build/'app-root','--component-plist',build/'components.plist','--identifier','com.yuntu.ntfs-desktop.application','--version',version,'--ownership','recommended',packages/'Application.pkg')
+# The guard executes before vendor components, closing the manual-install race.
+guard_scripts = build/'guard-scripts'; guard_scripts.mkdir()
+preflight = (root/'scripts/runtime-preinstall').read_text().replace('/bin/launchctl bootout system/com.macntfs.helper >/dev/null 2>&1 || true', '')
+(guard_scripts/'preinstall').write_text(preflight); (guard_scripts/'preinstall').chmod(0o755)
+run('/usr/bin/pkgbuild','--nopayload','--scripts',guard_scripts,'--identifier','com.yuntu.ntfs-desktop.update-guard','--version',version,packages/'UpdateGuard.pkg')
 # Combine the official macFUSE components without changing their code-signed
 # payload or scripts. The wrapper itself needs our Developer ID Installer for
 # public distribution; the complete original vendor-signed PKG is also kept.
@@ -115,6 +139,7 @@ ET.SubElement(distribution,'conclusion',{'file':'Conclusion.html'})
 distribution.find('options').set('hostArchitectures','arm64')
 distribution.find('options').set('customize','never')
 # Do not downgrade an existing newer macFUSE installation.
+# UpdateGuard preinstall performs privileged checks before driver installation.
 distribution.find('script').text += '''
 function hasNewerMacFUSE() {
     var receipt = my.target.receiptForIdentifier('io.macfuse.installer.components.core');
@@ -124,6 +149,11 @@ function hasNewerMacFUSE() {
 for choice in distribution.findall('choice'):
     choice.set('start_selected','!hasNewerMacFUSE()'); choice.set('start_enabled','false')
 outline = distribution.find('choices-outline')
+guard_id='com.yuntu.ntfs-desktop.update-guard'
+guard_choice=ET.SubElement(distribution,'choice',{'id':guard_id,'visible':'false','start_selected':'true','start_enabled':'false'})
+ET.SubElement(guard_choice,'pkg-ref',{'id':guard_id})
+outline.insert(0,ET.Element('line',{'choice':guard_id}))
+ET.SubElement(distribution,'pkg-ref',{'id':guard_id,'version':version,'auth':'root'}).text='#UpdateGuard.pkg'
 for identifier,name in [('com.yuntu.ntfs-desktop.runtime','OfflineRuntime.pkg'),('com.yuntu.ntfs-desktop.application','Application.pkg')]:
     choice = ET.SubElement(distribution,'choice',{'id':identifier,'title':identifier,'visible':'false','start_selected':'true','start_enabled':'false'})
     ET.SubElement(choice,'pkg-ref',{'id':identifier})

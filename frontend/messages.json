@@ -750,9 +750,9 @@
     "zh-Hant" : "磁盤訪問授權"
   },
   "磁盘访问权限" : {
-    "en" : "Disk access permissions",
+    "en" : "Disk access",
     "ja" : "ディスクアクセス権限",
-    "zh-Hant" : "磁盤訪問權限"
+    "zh-Hant" : "磁碟存取權限"
   },
   "离线安装资源缺失，请重新安装完整 PKG" : {
     "en" : "Offline resources are missing. Reinstall the full PKG.",
@@ -973,5 +973,225 @@
     "en" : "Stable mode uses the macFUSE kernel driver. After installation or updates, if macOS blocks the extension, open System Settings > Privacy & Security. Allow macFUSE / Benjamin Fleischer, authenticate, and restart as requested.",
     "ja" : "安定モードは macFUSE カーネルドライバーを使用します。インストールや更新後に拡張機能がブロックされた場合、「システム設定 → プライバシーとセキュリティ」で macFUSE / Benjamin Fleischer を許可し、認証して必要に応じて再起動してください。",
     "zh-Hant" : "默認「穩定模式」使用 macFUSE 內核驅動。首次使用或更新 macFUSE 後，若系統提示擴展被阻止，打開「系統設置 → 隱私與安全性」，找到 macFUSE / Benjamin Fleischer 的提示並選擇「允許」，按提示驗證並重啓。"
+  },
+  "运行诊断" : {
+    "en" : "Diagnostics",
+    "ja" : "実行診断",
+    "zh-Hant" : "執行診斷"
+  },
+  "检查组件、权限与实际挂载状态；不会修改磁盘或上传信息。" : {
+    "en" : "Check components, permissions and actual mounts. No disk changes or uploads.",
+    "ja" : "コンポーネント、権限、実際のマウント状態を確認します。ディスク変更やアップロードは行いません。",
+    "zh-Hant" : "檢查元件、權限與實際掛載狀態；不會修改磁碟或上傳資訊。"
+  },
+  "开始检查" : {
+    "en" : "Run checks",
+    "ja" : "確認を開始",
+    "zh-Hant" : "開始檢查"
+  },
+  "正在检查…" : {
+    "en" : "Checking…",
+    "ja" : "確認中…",
+    "zh-Hant" : "正在檢查…"
+  },
+  "已通过" : {
+    "en" : "Passed",
+    "ja" : "確認済み",
+    "zh-Hant" : "已通過"
+  },
+  "需要处理" : {
+    "en" : "Action needed",
+    "ja" : "対応が必要",
+    "zh-Hant" : "需要處理"
+  },
+  "待确认" : {
+    "en" : "Unconfirmed",
+    "ja" : "未確認",
+    "zh-Hant" : "待確認"
+  },
+  "导出诊断报告" : {
+    "en" : "Export report",
+    "ja" : "診断レポートを書き出す",
+    "zh-Hant" : "匯出診斷報告"
+  },
+  "报告只包含版本、检查结果和磁盘数量，不包含磁盘名称、UUID、文件路径或网络地址。" : {
+    "en" : "Reports contain versions, check results and disk counts, without disk names, UUIDs, file paths or network addresses.",
+    "ja" : "レポートにはバージョン、確認結果、ディスク数のみを含みます。ディスク名、UUID、ファイルパス、ネットワークアドレスは含みません。",
+    "zh-Hant" : "報告只包含版本、檢查結果和磁碟數量，不包含磁碟名稱、UUID、檔案路徑或網路位址。"
+  },
+  "离线读写组件" : {
+    "en" : "Offline components",
+    "ja" : "オフライン読み書きコンポーネント",
+    "zh-Hant" : "離線讀寫元件"
+  },
+  "组件完整性与版本检查通过" : {
+    "en" : "Integrity and version checks passed.",
+    "ja" : "整合性とバージョンの確認に合格しました。",
+    "zh-Hant" : "元件完整性與版本檢查通過"
+  },
+  "组件缺失、损坏或版本不一致，请安装完整 PKG" : {
+    "en" : "Components are missing, damaged or mismatched. Install the complete PKG.",
+    "ja" : "コンポーネントが不足、破損、またはバージョン不一致です。完全な PKG をインストールしてください。",
+    "zh-Hant" : "元件缺失、損壞或版本不一致，請安裝完整 PKG"
+  },
+  "后台助手" : {
+    "en" : "Background helper",
+    "ja" : "バックグラウンドヘルパー",
+    "zh-Hant" : "背景助手"
+  },
+  "已验证助手连接与版本" : {
+    "en" : "Helper connection and version verified.",
+    "ja" : "ヘルパーの接続とバージョンを確認しました。",
+    "zh-Hant" : "已驗證助手連線與版本"
+  },
+  "请退出旧实例，从「应用程序」启动；仍失败时安装完整 PKG" : {
+    "en" : "Quit old instances and launch from Applications. If this fails, install the complete PKG.",
+    "ja" : "古いアプリを終了し、アプリケーションから起動してください。改善しない場合は完全な PKG をインストールしてください。",
+    "zh-Hant" : "請退出舊執行個體，從「應用程式」啟動；仍失敗時安裝完整 PKG"
+  },
+  "驱动授权" : {
+    "en" : "Driver approval",
+    "ja" : "ドライバーの許可",
+    "zh-Hant" : "驅動授權"
+  },
+  "驱动已安装；macOS 授权状态需通过实际挂载确认" : {
+    "en" : "Driver installed. Approval must be confirmed by an actual mount.",
+    "ja" : "ドライバーはインストール済みです。許可状態は実際のマウントで確認します。",
+    "zh-Hant" : "驅動已安裝；macOS 授權狀態需透過實際掛載確認"
+  },
+  "请安装内置 macFUSE，并按首次使用向导完成授权" : {
+    "en" : "Install bundled macFUSE and follow the setup guide.",
+    "ja" : "同梱の macFUSE をインストールし、初回設定ガイドに従ってください。",
+    "zh-Hant" : "請安裝內建 macFUSE，並依首次使用精靈完成授權"
+  },
+  "已观察到受管理磁盘的实际读写挂载" : {
+    "en" : "A managed disk has been observed mounted read/write.",
+    "ja" : "管理対象ディスクの読み書きマウントを確認しました。",
+    "zh-Hant" : "已觀察到受管理磁碟的實際讀寫掛載"
+  },
+  "助手连接不能证明磁盘访问权限；连接磁盘并尝试挂载后确认" : {
+    "en" : "Helper connectivity does not prove disk access. Connect a disk and try mounting to confirm.",
+    "ja" : "ヘルパーの接続だけではディスク権限を確認できません。ディスクを接続し、マウントを試してください。",
+    "zh-Hant" : "助手連線不能證明磁碟存取權限；連接磁碟並嘗試掛載後確認"
+  },
+  "设备检测" : {
+    "en" : "Device detection",
+    "ja" : "デバイス検出",
+    "zh-Hant" : "裝置偵測"
+  },
+  "已完成外置 NTFS 设备检测" : {
+    "en" : "External NTFS device detection completed.",
+    "ja" : "外付け NTFS デバイスの検出を完了しました。",
+    "zh-Hant" : "已完成外接 NTFS 裝置偵測"
+  },
+  "设备信息读取失败，请刷新后重试" : {
+    "en" : "Device scan failed. Refresh and try again.",
+    "ja" : "デバイス情報を取得できません。更新して再試行してください。",
+    "zh-Hant" : "裝置資訊讀取失敗，請重新整理後重試"
+  },
+  "挂载状态" : {
+    "en" : "Mount status",
+    "ja" : "マウント状態",
+    "zh-Hant" : "掛載狀態"
+  },
+  "状态来自 macOS 实际挂载结果" : {
+    "en" : "Status reflects actual macOS mounts.",
+    "ja" : "macOS の実際のマウント結果を表示しています。",
+    "zh-Hant" : "狀態來自 macOS 實際掛載結果"
+  },
+  "尚未观察到已挂载磁盘" : {
+    "en" : "No mounted disks observed yet.",
+    "ja" : "マウント済みディスクはまだ確認されていません。",
+    "zh-Hant" : "尚未觀察到已掛載磁碟"
+  },
+  "微虚拟机实验模式" : {
+    "en" : "Experimental microVM",
+    "ja" : "実験的なマイクロ VM",
+    "zh-Hant" : "微虛擬機實驗模式"
+  },
+  "需要 Apple Silicon、macOS 13+ 和完整离线镜像" : {
+    "en" : "Requires Apple Silicon, macOS 13+ and the complete offline image.",
+    "ja" : "Apple Silicon、macOS 13 以降、完全なオフラインイメージが必要です。",
+    "zh-Hant" : "需要 Apple Silicon、macOS 13+ 和完整離線映像"
+  },
+  "微虚拟机（实验性，Apple Silicon · macOS 13+）" : {
+    "en" : "MicroVM (experimental, Apple Silicon · macOS 13+)",
+    "ja" : "マイクロ VM（実験的、Apple Silicon · macOS 13+）",
+    "zh-Hant" : "微虛擬機（實驗性，Apple Silicon · macOS 13+）"
+  },
+  "免内核扩展 · 离线实验模式" : {
+    "en" : "No kernel extension · Offline experiment",
+    "ja" : "カーネル拡張不要 · オフライン実験モード",
+    "zh-Hant" : "免核心擴充 · 離線實驗模式"
+  },
+  "使用内置 Linux 微虚拟机和本机 NFS，不需要恢复模式或关闭 SIP；仍需后台助手及磁盘访问授权。" : {
+    "en" : "Uses bundled Linux and local NFS. No Recovery Mode or SIP changes; helper and disk permissions are still required.",
+    "ja" : "同梱の Linux とローカル NFS を使用します。復旧モードや SIP の変更は不要ですが、ヘルパーとディスクのアクセス許可は必要です。",
+    "zh-Hant" : "使用內建 Linux 微虛擬機和本機 NFS，不需要復原模式或關閉 SIP；仍需背景助手及磁碟存取授權。"
+  },
+  "实验模式仅手动挂载，暂停自动开启读写。首次使用建议在测试磁盘上验证。" : {
+    "en" : "Experimental mode uses manual mounting only. Test with a disposable disk first.",
+    "ja" : "実験モードは手動マウントのみです。まずテスト用ディスクで確認してください。",
+    "zh-Hant" : "實驗模式僅手動掛載，暫停自動開啟讀寫。首次使用建議在測試磁碟上驗證。"
+  },
+  "实验模式仅手动挂载，暂停自动开启读写。" : {
+    "en" : "Manual mounting only in experimental mode.",
+    "ja" : "実験モードは手動マウントのみです。",
+    "zh-Hant" : "實驗模式僅手動掛載，暫停自動開啟讀寫。"
+  },
+  "微虚拟机离线组件未安装，请安装完整 PKG" : {
+    "en" : "Offline microVM components missing. Install the complete PKG.",
+    "ja" : "マイクロ VM のオフラインコンポーネントがありません。完全な PKG をインストールしてください。",
+    "zh-Hant" : "微虛擬機離線元件未安裝，請安裝完整 PKG"
+  },
+  "微虚拟机模式不需要 macFUSE 授权或恢复模式操作。请继续下一步，为助手授权磁盘访问。" : {
+    "en" : "MicroVM mode needs no macFUSE approval or Recovery Mode steps. Continue to grant disk access to the helper.",
+    "ja" : "マイクロ VM モードでは macFUSE の許可や復旧モードでの操作は不要です。次の手順でヘルパーのディスクアクセスを許可してください。",
+    "zh-Hant" : "微虛擬機模式不需要 macFUSE 授權或復原模式操作。請繼續下一步，為助手授權磁碟存取。"
+  },
+  "更新前请先安全推出 macntfs 管理的磁盘；关闭正在使用的文件后重试" : {
+    "en" : "Safely eject disks managed by macntfs before updating. Close open files and try again.",
+    "ja" : "更新前に macntfs の管理対象ディスクを安全に取り出してください。開いているファイルを閉じて再試行してください。",
+    "zh-Hant" : "更新前請先安全退出 macntfs 管理的磁碟；關閉正在使用的檔案後重試"
+  },
+  "读写服务尚未退出，请稍后重试更新" : {
+    "en" : "The disk service is still running. Wait before retrying the update.",
+    "ja" : "読み書きサービスがまだ動作中です。しばらく待って更新を再試行してください。",
+    "zh-Hant" : "讀寫服務尚未退出，請稍後重試更新"
+  },
+  "无法确认读写服务已退出，已停止更新" : {
+    "en" : "Cannot confirm the disk service stopped. Update paused.",
+    "ja" : "読み書きサービスの終了を確認できないため、更新を停止しました。",
+    "zh-Hant" : "無法確認讀寫服務已退出，已停止更新"
+  },
+  "已开启读写：微虚拟机实验模式" : {
+    "en" : "Writing enabled: experimental microVM",
+    "ja" : "読み書き有効：実験的マイクロ VM",
+    "zh-Hant" : "已開啟讀寫：微虛擬機實驗模式"
+  },
+  "磁盘仍在使用，已停止推出。请关闭文件后重试" : {
+    "en" : "Disk still in use. Close files before safely ejecting.",
+    "ja" : "ディスクが使用中です。ファイルを閉じてから取り出してください。",
+    "zh-Hant" : "磁碟仍在使用，已停止退出。請關閉檔案後重試"
+  },
+  "微虚拟机需要 Apple Silicon 和 macOS 13 或更新版本" : {
+    "en" : "MicroVM requires Apple Silicon and macOS 13 or later.",
+    "ja" : "マイクロ VM には Apple Silicon と macOS 13 以降が必要です。",
+    "zh-Hant" : "微虛擬機需要 Apple Silicon 和 macOS 13 或更新版本"
+  },
+  "诊断报告已保存并在 Finder 中显示；未包含磁盘名称、UUID、文件路径或网络地址" : {
+    "en" : "Report saved and revealed in Finder, without disk names, UUIDs, file paths or network addresses.",
+    "ja" : "レポートを保存し、Finder に表示しました。ディスク名、UUID、ファイルパス、ネットワークアドレスは含みません。",
+    "zh-Hant" : "診斷報告已儲存並在 Finder 中顯示；未包含磁碟名稱、UUID、檔案路徑或網路位址"
+  },
+  "磁盘以网络卷显示。Word 直接编辑及大量文件复制存在兼容性限制，重要文件建议先复制到 Mac 再编辑。每个分区的虚拟机内存上限为 512 MiB。" : {
+    "en" : "Disks appear as network volumes. Word editing and large file batches have compatibility limits. Copy important files to your Mac before editing. Each disk uses a 512 MB VM memory limit.",
+    "ja" : "ディスクはネットワークボリュームとして表示されます。Word での直接編集や大量のファイルコピーには互換性の制約があります。重要なファイルは Mac にコピーして編集してください。各ディスクの VM メモリ上限は 512 MB です。",
+    "zh-Hant" : "磁碟以網路卷宗顯示。Word 直接編輯及大量檔案複製存在相容性限制，重要檔案建議先複製到 Mac 再編輯。每個磁碟的虛擬機記憶體上限為 512 MB。"
+  },
+  "离线镜像已提供；完整性与读写将在挂载时验证" : {
+    "en" : "Offline image is present; integrity and read/write access are checked when mounting.",
+    "ja" : "オフラインイメージはあります。整合性と読み書きはマウント時に検証します。",
+    "zh-Hant" : "離線映像已提供；完整性與讀寫將在掛載時驗證"
   }
 }

@@ -19,13 +19,16 @@ jobs:
         run: |
           test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
       - run: npm ci
-      - run: brew install autoconf automake libtool pkgconf
+      - run: brew install autoconf automake libtool pkgconf util-linux gettext llvm lld
       - run: python3 scripts/prepare-vendor.py
       - name: Install build SDK
         run: sudo installer -pkg 'vendor/downloads/Install macFUSE.pkg' -target /
       - run: bash scripts/build-driver.sh && python3 scripts/test-probe-permission.py
+      - run: python3 scripts/build-microvm.py
       - run: npm run build && cargo test --locked --workspace && cargo build --locked --release --workspace
       - run: python3 scripts/package.py && python3 scripts/validate-package.py
+      - name: Require corresponding sources before public distribution
+        run: test -f "dist/macntfs-$(cat VERSION)-microvm-sources.tar.gz"
       - name: Sign updater archive
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}

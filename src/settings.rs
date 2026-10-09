@@ -8,6 +8,7 @@ pub enum Backend {
     Auto,
     Fskit,
     Kernel,
+    Microvm,
 }
 impl Backend {
     pub fn title(self) -> &'static str {
@@ -15,6 +16,7 @@ impl Backend {
             Self::Auto => "稳定模式（推荐）",
             Self::Fskit => "FSKit · 实验性",
             Self::Kernel => "内核 · 兼容模式",
+            Self::Microvm => "微虚拟机 · 实验性",
         }
     }
     pub fn resolved(self, os: &str) -> Result<&'static str> {
@@ -24,6 +26,8 @@ impl Backend {
             Self::Fskit if supported => Ok("fskit"),
             Self::Fskit => Err("FSKit 需要 macOS 15.4 或更新版本".into()),
             Self::Kernel => Ok("kernel"),
+            Self::Microvm if crate::microvm::supported(os) => Ok("microvm"),
+            Self::Microvm => Err("微虚拟机需要 Apple Silicon 和 macOS 13 或更新版本".into()),
         }
     }
 }

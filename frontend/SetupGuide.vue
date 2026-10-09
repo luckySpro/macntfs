@@ -1,7 +1,7 @@
 <script setup>
 import {tr,locale,setLanguage} from "./i18n";
 import {ref,watch,computed} from 'vue';
-defineProps({environment:Object,busy:Boolean});
+defineProps({environment:Object,busy:Boolean,backend:String});
 const emit=defineEmits(['action','refresh']);
 const saved=Number(localStorage.getItem('macntfs-setup-step'));
 const step=ref(saved>=1&&saved<=4?saved:1);
@@ -20,7 +20,7 @@ const steps=computed(()=>[tr(`安装应用`),tr(`允许驱动`),tr(`磁盘访问
 <button class="secondary" :disabled="busy" @click="emit('action','install')"> {{tr(`打开本地组件安装器`)}} </button>
 </div>
 <div v-else-if="step===2">
-<h3> {{tr(`2 · 允许 macFUSE 驱动`)}} </h3><p> {{tr(`默认「稳定模式」使用 macFUSE 内核驱动。首次使用或更新 macFUSE 后，若系统提示扩展被阻止，打开「系统设置 → 隐私与安全性」，找到 macFUSE / Benjamin Fleischer 的提示并选择「允许」，按提示验证并重启。`)}} </p>
+<div v-if="backend==='Microvm'" class="guide-status"><h3>{{tr('免内核扩展 · 离线实验模式')}}</h3><p>{{tr('微虚拟机模式不需要 macFUSE 授权或恢复模式操作。请继续下一步，为助手授权磁盘访问。')}}</p></div><template v-else><h3> {{tr(`2 · 允许 macFUSE 驱动`)}} </h3><p> {{tr(`默认「稳定模式」使用 macFUSE 内核驱动。首次使用或更新 macFUSE 后，若系统提示扩展被阻止，打开「系统设置 → 隐私与安全性」，找到 macFUSE / Benjamin Fleischer 的提示并选择「允许」，按提示验证并重启。`)}} </p>
 <button class="secondary" :disabled="busy" @click="emit('action','settings')"> {{tr(`打开系统授权设置`)}} </button>
 <details><summary> {{tr(`Apple 芯片 Mac：系统要求启用扩展或进入恢复模式时，具体怎么做？`)}} </summary>
 <p> {{tr(`适用于 M1、M2、M3 等 Apple 芯片，且你选择了稳定内核模式。驱动已正常工作时可跳过，不需要每次重启。调整为「降低安全性」会放宽对第三方内核扩展的限制，请了解后由你自行决定。`)}} </p>
@@ -28,7 +28,7 @@ const steps=computed(()=>[tr(`安装应用`),tr(`允许驱动`),tr(`磁盘访问
 <p> {{tr(`不需要关闭 SIP、关闭 FileVault 或勾选远程管理内核扩展。如果是公司管理的 Mac，交由管理员配置。`)}} </p>
 </details>
 <details><summary> {{tr(`Intel Mac 或不想调整启动安全策略？`)}} </summary><p> {{tr(`Intel Mac 不使用上述 Apple 芯片恢复模式步骤，一般在系统设置允许驱动并重启。macOS 15.4 及以上的 FSKit 后端不要求内核扩展或恢复模式，但本软件的 FSKit 尚属实验性，不能保证与稳定模式同等可用；可在下方读写引擎中选择。`)}} </p></details>
-<p class="guide-note"> {{tr(`是否允许驱动、是否需要重启由 macOS 判断，本向导不能自动读取完整授权状态。`)}} </p>
+<p class="guide-note"> {{tr(`是否允许驱动、是否需要重启由 macOS 判断，本向导不能自动读取完整授权状态。`)}} </p></template>
 </div>
 <div v-else-if="step===3">
 <h3> {{tr(`3 · 允许助手访问外置磁盘`)}} </h3><p> {{tr(`如果挂载提示「macOS 拒绝访问磁盘设备」，按下面步骤设置完整磁盘访问。这项权限范围较广，请只添加本软件安装的 ntfs-helper。`)}} </p>

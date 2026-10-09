@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     command('/usr/sbin/pkgutil','--expand',package,expanded)
     distribution=ET.parse(expanded/'Distribution').getroot()
     refs={node.text for node in distribution.findall('pkg-ref') if node.text and node.text.strip()}
-    expected={'#Core.pkg','#PreferencePane.pkg','#OfflineRuntime.pkg','#Application.pkg'}
+    expected={'#Core.pkg','#PreferencePane.pkg','#OfflineRuntime.pkg','#Application.pkg','#UpdateGuard.pkg'}
     assert refs==expected,refs
     assert distribution.find('options').get('hostArchitectures')=='arm64'
     for component in ['Core.pkg','PreferencePane.pkg']:
@@ -25,7 +25,27 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     names=[]
     for line in (payload/'SHA256SUMS').read_text().splitlines():
         digest,name=line.split('  ',1); assert sha(payload/name)==digest,name; names.append(name)
-    assert len(names)==4
+    assert len(names)==5
+    vm=root/'dist/package-build/runtime-root/Library/Application Support/NTFS Desktop/Runtime/MicroVM'
+    for line in (vm/'SHA256SUMS').read_text().splitlines():
+        digest,entry=line.split('  ',1);kind,name=entry.split(' ',1);path=vm/name
+        actual=hashlib.sha256(str(path.readlink()).encode()).hexdigest() if kind=='L' else sha(path)
+        assert actual==digest,name
+    for name in ['bin/anylinuxfs','libexec/gvproxy']:
+        for line in command('/usr/bin/otool','-L',vm/name).decode().splitlines()[1:]:
+            assert line.strip().split(' (')[0].startswith(('/usr/lib/','/System/Library/')),line
+    entitlements=plistlib.loads(subprocess.check_output(['/usr/bin/codesign','-d','--entitlements',':-',str(vm/'bin/anylinuxfs')],stderr=subprocess.DEVNULL))
+    assert entitlements.get('com.apple.security.hypervisor') is True
+    assert not (vm/'libexec/init-rootfs').exists(),'Runtime must never provision or download images'
+    assert (vm/'profile/alpine/rootfs.ver').read_text()=='macntfs-microvm-v1'
+    full=directory/'full'
+    command('/usr/sbin/pkgutil','--expand-full',package,full)
+    guest=full/'OfflineRuntime.pkg/Payload/Library/Application Support/NTFS Desktop/Runtime/MicroVM/profile/alpine/rootfs'
+    for name in ['bin/busybox','vmproxy','usr/sbin/rpc.nfsd']:
+        override=command('/usr/bin/xattr','-p','user.containers.override_stat',guest/name).decode().strip()
+        assert override.startswith('0:0:'),(name,override)
+    assert distribution.find('choices-outline')[0].get('choice')=='com.yuntu.ntfs-desktop.update-guard'
+    assert (expanded/'UpdateGuard.pkg/Scripts/preinstall').is_file()
     service_plist=root/'dist/package-build/runtime-root/Library/LaunchDaemons/com.macntfs.helper.plist'
     service=plistlib.loads(service_plist.read_bytes())
     assert service['ProgramArguments']==['/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper','serve']
@@ -38,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     assert any('flags=' in line and 'runtime' in line for line in flags.splitlines()),'GUI must enable hardened runtime before privileged IPC'
 
     executable=app/'Contents/MacOS/macntfs'
-    for binary in [executable,*[payload/name for name in names]]:
+    for binary in [executable,*[payload/name for name in names if name != "MicroVM/SHA256SUMS"],vm/"bin/anylinuxfs",vm/"libexec/gvproxy"]:
         command('/usr/bin/codesign','--verify','--strict',binary)
     command('/usr/bin/codesign','--verify','--deep','--strict',app)
     vendor_package=app/'Contents/Resources/Installers/Install macFUSE.pkg'
@@ -52,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     bom=command('/usr/bin/lsbom','-p','fmu',expanded/'OfflineRuntime.pkg/Bom').decode().splitlines()
     for name in names:
         item=next(line for line in bom if line.split('\t')[0].endswith('/Runtime/'+name))
-        _,mode,uid=item.split('\t'); assert uid=='0' and mode=='100755',item
+        _,mode,uid=item.split('\t'); assert uid=='0' and mode==('100644' if name=='MicroVM/SHA256SUMS' else '100755'),item
     app_bom=command('/usr/bin/lsbom','-p','fmu',expanded/'Application.pkg/Bom').decode().splitlines()
     for suffix in ['/macntfs.app','/macntfs.app/Contents','/macntfs.app/Contents/MacOS','/macntfs.app/Contents/MacOS/macntfs']:
         item=next(line for line in app_bom if line.split('\t')[0].endswith(suffix))
@@ -74,6 +94,7 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
         'clean_machine_offline_install_tested':False,'developer_id_notarized':False,
         'kernel_image_roundtrip':'Passed separately with scripts/test-offline-runtime.py',
         'fskit':'Experimental, not verified',
+        'microvm':'Experimental: offline payload and boot verified separately; physical disk/NFS roundtrip not certified',
     }
     (root/'dist/validation-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print('PASS: local installation plan, unchanged upstream components, signatures, payload hashes, root permissions, portable library dependencies')

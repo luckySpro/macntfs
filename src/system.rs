@@ -28,6 +28,7 @@ pub struct Environment {
     pub service: bool,
     pub service_issue: String,
     pub runtime_version: String,
+    pub microvm: bool,
 }
 pub fn resources() -> Option<PathBuf> {
     let executable = std::env::current_exe().ok()?;
@@ -68,6 +69,7 @@ pub fn environment() -> Environment {
         service: service.is_ok(),
         service_issue: service.err().unwrap_or_default(),
         runtime_version: installed.trim().into(),
+        microvm: crate::microvm::ready(),
     }
 }
 pub fn run(program: &str, args: &[&str]) -> Result<String> {
@@ -152,7 +154,7 @@ fn parse_volume(value: &Value) -> Result<Volume> {
         writable: boolean(d, "WritableVolume"),
     })
 }
-pub fn scan() -> Result<Vec<Volume>> {
+pub(crate) fn scan_physical() -> Result<Vec<Volume>> {
     let list = read_plist(&["list", "-plist", "external", "physical"])?;
     let ids = list
         .as_dictionary()
@@ -171,6 +173,15 @@ pub fn scan() -> Result<Vec<Volume>> {
             volumes.push(volume);
         }
     }
+    Ok(volumes)
+}
+pub fn scan() -> Result<Vec<Volume>> {
+    let mut volumes = scan_physical()?;
+    crate::sessions::reconcile(
+        &mut volumes,
+        &crate::sessions::load()?,
+        &crate::sessions::mount_table()?,
+    );
     Ok(volumes)
 }
 fn fresh(v: &Volume) -> Result<Volume> {
@@ -195,7 +206,7 @@ pub fn mount(v: &Volume, backend: crate::settings::Backend) -> Result<String> {
     if !env.runtime {
         return Err(env.runtime_issue);
     }
-    if !env.fuse {
+    if backend != crate::settings::Backend::Microvm && !env.fuse {
         return Err("请先完成离线驱动安装".into());
     }
     crate::privileged::verify_runtime(Path::new(RUNTIME))?;
@@ -210,7 +221,8 @@ pub fn eject(v: &Volume) -> Result<String> {
         .strip_prefix("disk")
         .filter(|s| !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()))
         .ok_or("无效磁盘标识")?;
-    run("/usr/sbin/diskutil", &["eject", &format!("disk{parent}")])?;
+    crate::daemon::request("eject", &v.id, &v.uuid, "")?;
+    let _ = parent;
     Ok("已安全推出整块磁盘，可拔下连接线".into())
 }
 pub fn open_volume(v: &Volume) -> Result<String> {
