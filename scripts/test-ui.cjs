@@ -4,14 +4,15 @@ const fs=require('fs');
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const page=await browser.newPage({viewport:{width:1440,height:1024}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{
- const callbacks=new Map();let serial=0;let settings=JSON.parse(localStorage.getItem('qa-settings')||'{"backend":"Auto","dark":false,"auto_mount":true,"theme":"Stone"}');
+ const callbacks=new Map();let serial=0;let settings=JSON.parse(localStorage.getItem('qa-settings')||'{"backend":"Auto","dark":false,"auto_mount":true,"theme":"Stone","language":"zh-Hans"}');
  window.__QA_OPS=[];window.__QA_WINDOW=[];
  window.__TAURI_INTERNALS__={transformCallback(cb){const id=++serial;callbacks.set(id,cb);return id},unregisterCallback(id){callbacks.delete(id)},invoke:async(cmd,args)=>{
- if(cmd==='snapshot')return {version:'0.3.8',volumes:JSON.parse(localStorage.getItem('qa-volumes')||'null')||[{uuid:'test-backup',name:'BackUp',id:'disk4s3',size:511700000000,mount:'/Volumes/NTFS-disk4s3',writable:true}],settings,environment:{runtime:true,fuse:true,service:true,os:'26.0',runtime_version:'0.3.8',fuse_version:'5.1.3'},monitor:{busy:!!localStorage.getItem('qa-busy'),last_event:''}};
+ if(cmd==='snapshot')return {version:'0.3.12',required_update:JSON.parse(localStorage.getItem('qa-required')||'null'),volumes:JSON.parse(localStorage.getItem('qa-volumes')||'null')||[{uuid:'test-backup',name:'BackUp',id:'disk4s3',size:511700000000,mount:'/Volumes/NTFS-disk4s3',writable:true}],settings,environment:{runtime:true,fuse:true,service:true,os:'26.0',runtime_version:'0.3.8',fuse_version:'5.1.3'},monitor:{busy:!!localStorage.getItem('qa-busy'),last_event:''}};
  if(cmd==='set_auto_mount'){settings.auto_mount=args.enabled;localStorage.setItem('qa-settings',JSON.stringify(settings));return null}
  if(cmd==='save_settings'){settings=args.settings;localStorage.setItem('qa-settings',JSON.stringify(settings));return null}
  if(cmd==='operate'){if(localStorage.getItem('qa-error'))throw '模拟操作失败';window.__QA_OPS.push(args);return '操作完成'}
- if(cmd==='check_updates')return null;
+ if(cmd==='check_updates'){if(localStorage.getItem('qa-check-error'))throw 'offline';return JSON.parse(localStorage.getItem('qa-required')||'null')}
+ if(cmd==='install_update'){if(localStorage.getItem('qa-check-error'))throw 'offline';window.__QA_WINDOW.push('install');throw 'simulated download failure'}
  if(cmd==='panel_action'){window.__QA_WINDOW.push(args.action);return null}
  if(cmd==='plugin:event|listen')return ++serial;
  if(cmd==='plugin:event|unlisten')return null;
@@ -46,5 +47,24 @@ const fs=require('fs');
  await page.getByRole('button',{name:'安全推出',exact:true}).last().click();if((await page.evaluate(()=>window.__QA_OPS)).at(-1).volume.uuid!=='panel-5')throw Error('panel targets wrong volume');
  await page.evaluate(()=>localStorage.setItem('qa-busy','1'));await page.reload();await page.locator('.panel-volume').last().waitFor();if(!(await page.getByRole('button',{name:'安全推出',exact:true}).last().isDisabled()))throw Error('panel allows concurrent eject');
  await page.evaluate(()=>{localStorage.removeItem('qa-busy');localStorage.setItem('qa-error','1')});await page.reload();await page.locator('.panel-volume').last().waitFor();await page.getByRole('button',{name:'安全推出',exact:true}).last().click();await page.getByText('模拟操作失败',{exact:true}).waitFor();if(await page.getByRole('button',{name:'安全推出',exact:true}).last().isDisabled())throw Error('failed panel operation stays locked');
- if(errors.length)throw Error(errors.join('\n'));console.log('PASS: three themes persist; Finder/eject IPC; settings; native/minimum width; panel buttons/toggle/navigation/multi-volume/busy/error; no page errors');await browser.close();
+ await page.evaluate(()=>{localStorage.removeItem('qa-error');localStorage.removeItem('qa-volumes')});
+ await page.setViewportSize({width:1060,height:760});await page.goto((process.env.TEST_UI_URL||'http://127.0.0.1:1420'));
+ for(const [id,label,heading,open,guide] of [['en','English','Settings & updates','Open Finder','Getting started'],['zh-Hant','繁體中文','設置與更新','打開 Finder','首次使用嚮導'],['ja','日本語','設定と更新','Finder で開く','初回設定ガイド'],['zh-Hans','简体中文','设置与更新','打开 Finder','首次使用向导']]){
+ await page.locator('aside button').nth(2).click();await page.locator('.language-options button').filter({hasText:label}).click();await page.getByRole('heading',{name:heading,exact:true}).waitFor();
+ if(await page.locator('html').getAttribute('lang')!==id)throw Error('wrong document language');
+ await page.screenshot({path:`/tmp/macntfs-qa/language-${id}.png`,fullPage:true});
+ await page.reload();await page.getByRole('button',{name:open,exact:true}).waitFor();if(await page.locator('html').getAttribute('lang')!==id)throw Error('language lost after reload');
+ await page.setViewportSize({width:420,height:540});await page.goto((process.env.TEST_UI_URL||'http://127.0.0.1:1420')+'/?panel');await page.getByRole('button',{name:open,exact:true}).waitFor();await page.screenshot({path:`/tmp/macntfs-qa/panel-language-${id}.png`});if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth||document.documentElement.scrollHeight>innerHeight))throw Error('language panel overflow '+id);
+ await page.setViewportSize({width:1060,height:760});await page.goto((process.env.TEST_UI_URL||'http://127.0.0.1:1420'));
+ }
+ await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('qa-settings'));s.language='en';localStorage.setItem('qa-settings',JSON.stringify(s));localStorage.setItem('qa-required',JSON.stringify({version:'99.0.0',notes:'test'}));localStorage.setItem('qa-check-error','1')});await page.reload();await page.getByRole('dialog',{name:'Update required',exact:true}).waitFor();
+ if(!(await page.locator('main').evaluate(el=>el.inert)))throw Error('mandatory dialog does not isolate disk controls');
+ await page.getByRole('dialog').getByRole('button',{name:/Safely eject/}).click();if((await page.evaluate(()=>window.__QA_OPS)).at(-1).action!=='eject')throw Error('mandatory update prevents safe eject');
+ await page.getByRole('button',{name:'Update now',exact:true}).click();await page.getByRole('alert').getByText(/offline/).waitFor();if(!(await page.getByRole('dialog').isVisible()))throw Error('offline cleared mandatory gate');
+ await page.evaluate(()=>localStorage.removeItem('qa-check-error'));await page.getByRole('button',{name:'Update now',exact:true}).click();await page.getByRole('alert').getByText(/simulated download failure/).waitFor();await page.getByRole('button',{name:'Update now',exact:true}).click();if((await page.evaluate(()=>window.__QA_WINDOW)).filter(x=>x==='install').length!==2)throw Error('download retry failed');
+ await page.reload();await page.getByRole('dialog',{name:'Update required',exact:true}).waitFor();await page.screenshot({path:'/tmp/macntfs-qa/required-update.png'});
+ await page.goto((process.env.TEST_UI_URL||'http://127.0.0.1:1420')+'/?panel');await page.locator('.panel-update').waitFor();if(!(await page.getByRole('button',{name:'Enable writing',exact:true}).isDisabled()))throw Error('tray mandatory mount enabled');if(await page.getByRole('button',{name:'Safely eject',exact:true}).isDisabled())throw Error('tray mandatory eject disabled');
+ const resolved=await page.evaluate(async()=>{const {resolveLanguage}=await import('/i18n.js');return ['zh-CN','zh-TW','zh-HK','ja-JP','en-US','fr-FR'].map(l=>resolveLanguage('auto',l))});if(resolved.join(',')!=='zh-Hans,zh-Hant,zh-Hant,ja,en,en')throw Error('system language mapping incorrect');
+ await page.evaluate(()=>{localStorage.removeItem('qa-required');localStorage.setItem('qa-check-error','1')});await page.goto((process.env.TEST_UI_URL||'http://127.0.0.1:1420'));await page.getByRole('button',{name:'Open Finder',exact:true}).waitFor();if(await page.getByRole('dialog').count())throw Error('unknown offline update locked app');
+ if(errors.length)throw Error(errors.join('\n'));console.log('PASS: three themes persist; Finder/eject IPC; settings; native/minimum width; panel buttons/toggle/navigation/multi-volume/busy/error; four languages/persistence; required update/offline/retry/eject; no page errors');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

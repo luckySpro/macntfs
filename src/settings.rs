@@ -53,6 +53,7 @@ pub struct Settings {
     pub dark: bool,
     pub theme: Theme,
     pub auto_mount: bool,
+    pub language: String,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -61,10 +62,15 @@ impl Default for Settings {
             dark: false,
             theme: Theme::Stone,
             auto_mount: true,
+            language: "auto".into(),
         }
     }
 }
 pub fn data_dir() -> PathBuf {
+    #[cfg(debug_assertions)]
+    if let Some(path) = std::env::var_os("MACNTFS_TEST_DATA_DIR") {
+        return PathBuf::from(path);
+    }
     std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir)
@@ -96,6 +102,7 @@ mod tests {
         let settings: Settings =
             serde_json::from_str(r#"{"backend":"Kernel","dark":false,"auto_mount":false}"#)
                 .unwrap();
+        assert_eq!(settings.language, "auto");
         assert_eq!(settings.theme, Theme::Stone);
         assert_eq!(settings.backend, Backend::Kernel);
         assert!(!settings.auto_mount);

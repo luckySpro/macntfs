@@ -1,0 +1,977 @@
+{
+  "· 已安装助手" : {
+    "en" : "· Installed helper",
+    "ja" : "· インストール済みヘルパー",
+    "zh-Hant" : "· 已安裝助手"
+  },
+  "✓ 后台助手已连接，日常挂载无需密码" : {
+    "en" : "✓ Helper connected. No password for routine mounting.",
+    "ja" : "✓ ヘルパー接続済み。通常のマウントはパスワード不要です。",
+    "zh-Hant" : "✓ 後台助手已連接，日常掛載無需密碼"
+  },
+  "1 · 安装到「应用程序」" : {
+    "en" : "1 · Install in Applications",
+    "ja" : "1 · アプリケーションにインストール",
+    "zh-Hant" : "1 · 安裝到「應用程序」"
+  },
+  "2 · 允许 macFUSE 驱动" : {
+    "en" : "2 · Allow the macFUSE driver",
+    "ja" : "2 · macFUSE ドライバーを許可",
+    "zh-Hant" : "2 · 允許 macFUSE 驅動"
+  },
+  "3 · 允许助手访问外置磁盘" : {
+    "en" : "3 · Allow the helper to access external disks",
+    "ja" : "3 · ヘルパーの外付けディスクアクセスを許可",
+    "zh-Hant" : "3 · 允許助手訪問外置磁盤"
+  },
+  "4 · 检查并开始使用" : {
+    "en" : "4 · Check and start using macntfs",
+    "ja" : "4 · 確認して使用を開始",
+    "zh-Hant" : "4 · 檢查並開始使用"
+  },
+  "Apple 启动安全策略" : {
+    "en" : "Apple startup security policy",
+    "ja" : "Apple 起動セキュリティポリシー",
+    "zh-Hant" : "Apple 啓動安全策略"
+  },
+  "Apple 芯片 Mac：系统要求启用扩展或进入恢复模式时，具体怎么做？" : {
+    "en" : "Apple silicon: how do I enable extensions or use Recovery when macOS asks?",
+    "ja" : "Apple シリコン：拡張機能の有効化や復旧モードを求められた場合は？",
+    "zh-Hant" : "Apple 芯片 Mac：系統要求啓用擴展或進入恢復模式時，具體怎麼做？"
+  },
+  "FSKit（实验性，macOS 15.4+）" : {
+    "en" : "FSKit (experimental, macOS 15.4+)",
+    "ja" : "FSKit（実験的、macOS 15.4 以降）",
+    "zh-Hant" : "FSKit（實驗性，macOS 15.4+）"
+  },
+  "Intel Mac 不使用上述 Apple 芯片恢复模式步骤，一般在系统设置允许驱动并重启。macOS 15.4 及以上的 FSKit 后端不要求内核扩展或恢复模式，但本软件的 FSKit 尚属实验性，不能保证与稳定模式同等可用；可在下方读写引擎中选择。" : {
+    "en" : "Intel Macs do not use the Apple silicon Recovery steps above. Usually, allow the driver in System Settings and restart. FSKit on macOS 15.4+ needs no kernel extension or Recovery, but this app's FSKit support is experimental and may not work as reliably. Select it under File system driver.",
+    "ja" : "Intel Mac では上記の Apple シリコン用の復旧手順は使いません。通常はシステム設定で許可して再起動します。macOS 15.4 以降の FSKit はカーネル拡張機能や復旧モードが不要ですが、本アプリでは実験的対応で、安定モードと同等の動作は保証できません。下のドライバー設定で選択できます。",
+    "zh-Hant" : "Intel Mac 不使用上述 Apple 芯片恢復模式步驟，一般在系統設置允許驅動並重啓。macOS 15.4 及以上的 FSKit 後端不要求內核擴展或恢復模式，但本軟件的 FSKit 尚屬實驗性，不能保證與穩定模式同等可用；可在下方讀寫引擎中選擇。"
+  },
+  "Intel Mac 或不想调整启动安全策略？" : {
+    "en" : "Intel Mac, or prefer not to change startup security?",
+    "ja" : "Intel Mac の場合、または起動セキュリティを変更したくない場合は？",
+    "zh-Hant" : "Intel Mac 或不想調整啓動安全策略？"
+  },
+  "macFUSE 安装指南" : {
+    "en" : "macFUSE installation guide",
+    "ja" : "macFUSE インストールガイド",
+    "zh-Hant" : "macFUSE 安裝指南"
+  },
+  "macFUSE 尚未安装" : {
+    "en" : "macFUSE not installed",
+    "ja" : "macFUSE 未インストール",
+    "zh-Hant" : "macFUSE 尚未安裝"
+  },
+  "macFUSE 已安装" : {
+    "en" : "macFUSE installed",
+    "ja" : "macFUSE インストール済み",
+    "zh-Hant" : "macFUSE 已安裝"
+  },
+  "macOS 拒绝访问磁盘设备" : {
+    "en" : "macOS denied access to the disk device",
+    "ja" : "macOS がディスクへのアクセスを拒否しました",
+    "zh-Hant" : "macOS 拒絕訪問磁盤設備"
+  },
+  "macOS 拒绝访问磁盘设备。请在「完整磁盘访问」中重新添加并授权权限助手 ntfs-helper，然后重试。" : {
+    "en" : "macOS denied disk access. Add ntfs-helper again in Full Disk Access, enable it, and retry.",
+    "ja" : "macOS がディスクアクセスを拒否しました。フルディスクアクセスに ntfs-helper を再追加して有効にし、再試行してください。",
+    "zh-Hant" : "macOS 拒絕訪問磁盤設備。請在「完整磁盤訪問」中重新添加並授權權限助手 ntfs-helper，然後重試。"
+  },
+  "macOS 管理员密码与隐私授权分别管理。访问磁盘设备需要为权限助手 ntfs-helper 授予完整磁盘访问。此权限范围较广，请只添加本安装包提供的助手；软件仍只对你选择的外置 NTFS 磁盘执行操作。" : {
+    "en" : "macOS administrator approval and privacy permissions are separate. The ntfs-helper needs Full Disk Access to open disk devices. This permission is broad: add only the bundled helper. macntfs operates only on the external NTFS disks you select.",
+    "ja" : "macOS の管理者認証とプライバシー権限は別です。ntfs-helper がディスクにアクセスするにはフルディスクアクセスが必要です。広い権限のため、同梱ヘルパーだけを追加してください。操作対象は選択した外付け NTFS ディスクです。",
+    "zh-Hant" : "macOS 管理員密碼與隱私授權分別管理。訪問磁盤設備需要為權限助手 ntfs-helper 授予完整磁盤訪問。此權限範圍較廣，請只添加本安裝包提供的助手；軟件仍只對你選擇的外置 NTFS 磁盤執行操作。"
+  },
+  "NTFS 文件系统异常。请在 Windows 中检查磁盘后重试。" : {
+    "en" : "NTFS file system issue. Check the disk in Windows before retrying.",
+    "ja" : "NTFS に異常があります。Windows でディスクを検査して再試行してください。",
+    "zh-Hant" : "NTFS 文件系統異常。請在 Windows 中檢查磁盤後重試。"
+  },
+  "上一步" : {
+    "en" : "Previous",
+    "ja" : "前へ",
+    "zh-Hant" : "上一步"
+  },
+  "下一步" : {
+    "en" : "Next",
+    "ja" : "次へ",
+    "zh-Hant" : "下一步"
+  },
+  "下载并打开安装器" : {
+    "en" : "Download & open installer",
+    "ja" : "ダウンロードしてインストーラーを開く",
+    "zh-Hant" : "下載並打開安裝器"
+  },
+  "不需要关闭 SIP、关闭 FileVault 或勾选远程管理内核扩展。如果是公司管理的 Mac，交由管理员配置。" : {
+    "en" : "You do not need to disable SIP or FileVault, or enable remote kernel extension management. Ask your administrator on a managed Mac.",
+    "ja" : "SIP や FileVault の無効化、カーネル拡張機能の遠隔管理の許可は不要です。管理対象の Mac は管理者に設定を依頼してください。",
+    "zh-Hant" : "不需要關閉 SIP、關閉 FileVault 或勾選遠程管理內核擴展。如果是公司管理的 Mac，交由管理員配置。"
+  },
+  "仅对状态正常的 NTFS 磁盘启用。" : {
+    "en" : "Only enabled for healthy NTFS disks.",
+    "ja" : "正常な NTFS ディスクのみ有効にします。",
+    "zh-Hant" : "僅對狀態正常的 NTFS 磁盤啓用。"
+  },
+  "作者 Lucky · 473276@qq.com" : {
+    "en" : "By Lucky · 473276@qq.com",
+    "ja" : "作者 Lucky · 473276@qq.com",
+    "zh-Hant" : "作者 Lucky · 473276@qq.com"
+  },
+  "作者：Lucky" : {
+    "en" : "Author: Lucky",
+    "ja" : "作者：Lucky",
+    "zh-Hant" : "作者：Lucky"
+  },
+  "保存工作，关闭 Mac。完全关机后，长按电源键 / Touch ID 按钮，直到出现「正在载入启动选项」。" : {
+    "en" : "Save your work and shut down. Then hold the power / Touch ID button until Loading startup options appears.",
+    "ja" : "作業を保存して終了します。完全に電源が切れたら、電源／Touch ID ボタンを「起動オプションを読み込み中」と表示されるまで押し続けます。",
+    "zh-Hant" : "保存工作，關閉 Mac。完全關機後，長按電源鍵 / Touch ID 按鈕，直到出現「正在載入啓動選項」。"
+  },
+  "允许驱动" : {
+    "en" : "Allow driver",
+    "ja" : "ドライバーの許可",
+    "zh-Hant" : "允許驅動"
+  },
+  "免费开源 · Rust + Tauri" : {
+    "en" : "Free & open source · Rust + Tauri",
+    "ja" : "無料・オープンソース · Rust + Tauri",
+    "zh-Hant" : "免費開源 · Rust + Tauri"
+  },
+  "免费开源 / v" : {
+    "en" : "Free & open source / v",
+    "ja" : "無料・オープンソース / v",
+    "zh-Hant" : "免費開源 / v"
+  },
+  "关于 macntfs" : {
+    "en" : "About macntfs",
+    "ja" : "macntfs について",
+    "zh-Hant" : "關於 macntfs"
+  },
+  "关闭窗口后仍在菜单栏运行。设备插入时自动检查并开启 NTFS 读写；退出应用会停止设备检测。" : {
+    "en" : "Closing the window keeps macntfs in the menu bar. It checks inserted NTFS disks and enables writing. Quitting stops detection.",
+    "ja" : "ウインドウを閉じてもメニューバーで動作します。接続した NTFS ディスクを確認して書き込みを有効にします。終了すると検出が停止します。",
+    "zh-Hant" : "關閉窗口後仍在菜單欄運行。設備插入時自動檢查並開啓 NTFS 讀寫；退出應用會停止設備檢測。"
+  },
+  "内核兼容模式" : {
+    "en" : "Kernel compatibility mode",
+    "ja" : "カーネル互換モード",
+    "zh-Hant" : "內核兼容模式"
+  },
+  "最近操作：" : {
+    "en" : "Last action:",
+    "ja" : "直近の操作：",
+    "zh-Hant" : "最近操作："
+  },
+  "切换配色与布局，选择会自动保存。" : {
+    "en" : "Switch colors and layout. Your selection is saved automatically.",
+    "ja" : "配色とレイアウトを切り替えます。選択は自動保存されます。",
+    "zh-Hant" : "切換配色與佈局，選擇會自動保存。"
+  },
+  "刷新" : {
+    "en" : "Refresh",
+    "ja" : "更新",
+    "zh-Hant" : "刷新"
+  },
+  "刷新设备" : {
+    "en" : "Refresh devices",
+    "ja" : "デバイスを更新",
+    "zh-Hant" : "刷新設備"
+  },
+  "发现新版本后，必须更新才能继续开启读写。已有磁盘不会被强行卸载，可先安全推出。" : {
+    "en" : "A newer release is required before enabling write access. Mounted disks will stay mounted; you can safely eject them first.",
+    "ja" : "新しいバージョンへの更新が完了するまで、新規の書き込みマウントは停止します。既存のディスクは強制的に解除しません。先に安全に取り出せます。",
+    "zh-Hant" : "發現新版本後，必須更新才能繼續開啓讀寫。已有磁盤不會被強行卸載，可先安全推出。"
+  },
+  "只读" : {
+    "en" : "Read only",
+    "ja" : "読み取り専用",
+    "zh-Hant" : "只讀"
+  },
+  "可读写" : {
+    "en" : "Read & write",
+    "ja" : "読み書き可能",
+    "zh-Hant" : "可讀寫"
+  },
+  "后台助手尚未连接" : {
+    "en" : "Helper not connected yet",
+    "ja" : "ヘルパー未接続",
+    "zh-Hant" : "後台助手尚未連接"
+  },
+  "后台助手已就绪 · 挂载无需密码" : {
+    "en" : "Helper ready · No mounting password",
+    "ja" : "ヘルパー準備完了 · マウントのパスワード不要",
+    "zh-Hant" : "後台助手已就緒 · 掛載無需密碼"
+  },
+  "后台助手已就绪 · 日常挂载无需密码" : {
+    "en" : "Helper ready · No password for routine mounting",
+    "ja" : "ヘルパー準備完了 · 通常のマウントではパスワード不要",
+    "zh-Hant" : "後台助手已就緒 · 日常掛載無需密碼"
+  },
+  "后台助手已连接" : {
+    "en" : "Helper connected",
+    "ja" : "ヘルパー接続済み",
+    "zh-Hant" : "後台助手已連接"
+  },
+  "后台助手已连接 · 挂载无需密码" : {
+    "en" : "Helper connected · No mounting password",
+    "ja" : "ヘルパー接続済み · マウントのパスワード不要",
+    "zh-Hant" : "後台助手已連接 · 掛載無需密碼"
+  },
+  "后台助手未连接" : {
+    "en" : "Helper disconnected",
+    "ja" : "ヘルパー未接続",
+    "zh-Hant" : "後台助手未連接"
+  },
+  "后台助手连接异常" : {
+    "en" : "Helper connection issue",
+    "ja" : "ヘルパー接続の問題",
+    "zh-Hant" : "後台助手連接異常"
+  },
+  "启动时及后台定期检查更新。发现新版后暂停新的读写挂载，更新完成后恢复。未检测到必需更新时可离线使用；已经检测到的更新要求会保留。" : {
+    "en" : "Updates are checked at startup and periodically in the background. New write mounts pause until the newer release is installed. Offline use is available when no mandatory update is known; a known requirement is retained.",
+    "ja" : "起動時とバックグラウンドで定期的に更新を確認します。新版を検出すると、更新完了まで新規の書き込みマウントを停止します。必須更新が未検出の場合はオフラインで利用できます。検出済みの要求は保持します。",
+    "zh-Hant" : "啓動時及後台定期檢查更新。發現新版後暫停新的讀寫掛載，更新完成後恢復。未檢測到必需更新時可離線使用；已經檢測到的更新要求會保留。"
+  },
+  "启动时自动检查 GitHub Release。完整 PKG 验证签名和版本后打开系统安装器，同时更新应用与助手；离线时读写功能可正常使用。" : {
+    "en" : "GitHub releases are checked at startup. The full PKG is verified before opening the system installer to update the app and helper together. Disk features work offline.",
+    "ja" : "起動時に GitHub Release を確認します。完全版 PKG を検証してシステムインストーラーを開き、アプリとヘルパーを同時に更新します。ディスク機能はオフラインで利用できます。",
+    "zh-Hant" : "啓動時自動檢查 GitHub Release。完整 PKG 驗證簽名和版本後打開系統安裝器，同時更新應用與助手；離線時讀寫功能可正常使用。"
+  },
+  "回到 macntfs，点「重新检查」，再连接磁盘。" : {
+    "en" : "Return to macntfs, choose Recheck, then connect the disk.",
+    "ja" : "macntfs に戻り「再確認」を押してから、ディスクを接続します。",
+    "zh-Hant" : "回到 macntfs，點「重新檢查」，再連接磁盤。"
+  },
+  "在 Finder 中打开" : {
+    "en" : "Open in Finder",
+    "ja" : "Finder で開く",
+    "zh-Hant" : "在 Finder 中打開"
+  },
+  "在 Finder 定位助手" : {
+    "en" : "Reveal helper in Finder",
+    "ja" : "Finder でヘルパーを表示",
+    "zh-Hant" : "在 Finder 定位助手"
+  },
+  "在恢复环境顶部菜单选择「实用工具 → 启动安全性实用工具」。若它自动打开，直接继续。" : {
+    "en" : "In Recovery, choose Utilities > Startup Security Utility. If already open, continue.",
+    "ja" : "復旧環境の上部メニューから「ユーティリティ → 起動セキュリティユーティリティ」を選びます。すでに開いている場合は次へ進みます。",
+    "zh-Hant" : "在恢復環境頂部菜單選擇「實用工具 → 啓動安全性實用工具」。若它自動打開，直接繼續。"
+  },
+  "处理中…" : {
+    "en" : "Working…",
+    "ja" : "処理中…",
+    "zh-Hant" : "處理中…"
+  },
+  "外置磁盘" : {
+    "en" : "External disks",
+    "ja" : "外付けディスク",
+    "zh-Hant" : "外置磁盤"
+  },
+  "外置磁盘列表" : {
+    "en" : "External disk list",
+    "ja" : "外付けディスク一覧",
+    "zh-Hant" : "外置磁盤列表"
+  },
+  "外置设备" : {
+    "en" : "External devices",
+    "ja" : "外部デバイス",
+    "zh-Hant" : "外置設備"
+  },
+  "如果挂载提示「macOS 拒绝访问磁盘设备」，按下面步骤设置完整磁盘访问。这项权限范围较广，请只添加本软件安装的 ntfs-helper。" : {
+    "en" : "If mounting reports that macOS denied access to the disk device, configure Full Disk Access below. This broad permission should be granted only to the installed ntfs-helper.",
+    "ja" : "マウント時に macOS がディスクへのアクセスを拒否した場合、次の手順でフルディスクアクセスを設定します。広い権限のため、インストールした ntfs-helper のみ追加してください。",
+    "zh-Hant" : "如果掛載提示「macOS 拒絕訪問磁盤設備」，按下面步驟設置完整磁盤訪問。這項權限範圍較廣，請只添加本軟件安裝的 ntfs-helper。"
+  },
+  "安全推出" : {
+    "en" : "Safely eject",
+    "ja" : "安全に取り出す",
+    "zh-Hant" : "安全推出"
+  },
+  "安全推出整块磁盘" : {
+    "en" : "Safely eject entire disk",
+    "ja" : "ディスク全体を安全に取り出す",
+    "zh-Hant" : "安全推出整塊磁盤"
+  },
+  "安全推出整块磁盘，包括其他分区" : {
+    "en" : "Safely eject the entire disk, including other partitions",
+    "ja" : "他のパーティションを含むディスク全体を安全に取り出します",
+    "zh-Hant" : "安全推出整塊磁盤，包括其他分區"
+  },
+  "安装器需要你的系统授权，完成安装后从「应用程序」重新启动。" : {
+    "en" : "Approve the system installer, then relaunch macntfs from Applications.",
+    "ja" : "システムインストーラーで認証し、完了後「アプリケーション」から macntfs を再起動してください。",
+    "zh-Hant" : "安裝器需要你的系統授權，完成安裝後從「應用程序」重新啓動。"
+  },
+  "安装应用" : {
+    "en" : "Install app",
+    "ja" : "アプリのインストール",
+    "zh-Hant" : "安裝應用"
+  },
+  "安装或更新内置读写组件，即可继续使用。" : {
+    "en" : "Install or update the bundled drivers to continue.",
+    "ja" : "内蔵ドライバーをインストールまたは更新してください。",
+    "zh-Hant" : "安裝或更新內置讀寫組件，即可繼續使用。"
+  },
+  "安装授权、驱动授权、磁盘访问是三个不同步骤。你只需按当前页面操作；软件不会替你更改启动安全策略。" : {
+    "en" : "Installation approval, driver approval, and disk access are separate steps. Follow this page. macntfs does not change your startup security policy.",
+    "ja" : "インストール認証、ドライバーの許可、ディスクアクセスは別の手順です。このページに従ってください。起動時のセキュリティポリシーは自動で変更しません。",
+    "zh-Hant" : "安裝授權、驅動授權、磁盤訪問是三個不同步驟。你只需按當前頁面操作；軟件不會替你更改啓動安全策略。"
+  },
+  "安装时如系统提供 Touch ID，可以使用指纹；软件不会保存管理员密码，也不更改系统的验证策略。" : {
+    "en" : "Use Touch ID if macOS offers it during installation. macntfs never stores your password or changes authentication policies.",
+    "ja" : "インストール時に macOS が Touch ID を表示した場合は利用できます。パスワードは保存せず、認証方針も変更しません。",
+    "zh-Hant" : "安裝時如系統提供 Touch ID，可以使用指紋；軟件不會保存管理員密碼，也不更改系統的驗證策略。"
+  },
+  "安装组件" : {
+    "en" : "Install components",
+    "ja" : "コンポーネントをインストール",
+    "zh-Hant" : "安裝組件"
+  },
+  "安装资源随软件提供，无需联网。" : {
+    "en" : "Installation resources are bundled. No network required.",
+    "ja" : "インストール用ファイルは同梱されています。通信は不要です。",
+    "zh-Hant" : "安裝資源隨軟件提供，無需聯網。"
+  },
+  "完成检查" : {
+    "en" : "Final check",
+    "ja" : "最終確認",
+    "zh-Hant" : "完成檢查"
+  },
+  "完成读写组件安装" : {
+    "en" : "Complete driver installation",
+    "ja" : "ドライバーのインストールを完了",
+    "zh-Hant" : "完成讀寫組件安裝"
+  },
+  "完整安装包" : {
+    "en" : "Full installer",
+    "ja" : "完全版インストーラー",
+    "zh-Hant" : "完整安裝包"
+  },
+  "官方说明：" : {
+    "en" : "Official guidance:",
+    "ja" : "公式ガイド：",
+    "zh-Hant" : "官方說明："
+  },
+  "实时设备检测" : {
+    "en" : "Live device detection",
+    "ja" : "デバイスを自動検出",
+    "zh-Hant" : "實時設備檢測"
+  },
+  "容量" : {
+    "en" : "Capacity",
+    "ja" : "容量",
+    "zh-Hant" : "容量"
+  },
+  "尚未安装" : {
+    "en" : "Not installed yet",
+    "ja" : "未インストール",
+    "zh-Hant" : "尚未安裝"
+  },
+  "尚未挂载" : {
+    "en" : "Not mounted yet",
+    "ja" : "未マウント",
+    "zh-Hant" : "尚未掛載"
+  },
+  "工作空间" : {
+    "en" : "Workspace",
+    "ja" : "ワークスペース",
+    "zh-Hant" : "工作空間"
+  },
+  "已在 Finder 中打开" : {
+    "en" : "Opened in Finder.",
+    "ja" : "Finder で開きました。",
+    "zh-Hant" : "已在 Finder 中打開"
+  },
+  "已在 Finder 选中 ntfs-helper。请将它添加到「完整磁盘访问」列表并开启授权。" : {
+    "en" : "Selected ntfs-helper in Finder. Add it to Full Disk Access and enable permission.",
+    "ja" : "Finder で ntfs-helper を選択しました。フルディスクアクセスに追加して許可を有効にしてください。",
+    "zh-Hant" : "已在 Finder 選中 ntfs-helper。請將它添加到「完整磁盤訪問」列表並開啓授權。"
+  },
+  "已安全推出整块磁盘，可拔下连接线" : {
+    "en" : "The entire disk was safely ejected. You can unplug it.",
+    "ja" : "ディスク全体を安全に取り出しました。ケーブルを外せます。",
+    "zh-Hant" : "已安全推出整塊磁盤，可拔下連接線"
+  },
+  "已安装完整 PKG 时，请先退出旧版本和测试实例，再从「应用程序」启动。" : {
+    "en" : "After installing the full PKG, quit older and test instances, then launch from Applications.",
+    "ja" : "完全版 PKG のインストール後は、旧版とテスト版を終了し、「アプリケーション」から起動してください。",
+    "zh-Hant" : "已安裝完整 PKG 時，請先退出舊版本和測試實例，再從「應用程序」啓動。"
+  },
+  "已打开 GitHub 完整安装包下载页。下载 PKG 后完成系统安装。" : {
+    "en" : "Opened the GitHub installer page. Download the PKG and complete installation.",
+    "ja" : "GitHub のダウンロードページを開きました。PKG をダウンロードしてインストールしてください。",
+    "zh-Hant" : "已打開 GitHub 完整安裝包下載頁。下載 PKG 後完成系統安裝。"
+  },
+  "已打开完整磁盘访问设置。请使用「打开助手位置」，将 ntfs-helper 添加到列表并开启；更新助手后若权限失效，请移除旧条目再重新添加。" : {
+    "en" : "Opened Full Disk Access. Locate the helper, add ntfs-helper and enable it. If an update invalidates old permissions, remove and re-add it.",
+    "ja" : "フルディスクアクセスを開きました。ヘルパーの場所を開き、ntfs-helper を追加して有効にしてください。更新で権限が失効した場合は削除して再追加してください。",
+    "zh-Hant" : "已打開完整磁盤訪問設置。請使用「打開助手位置」，將 ntfs-helper 添加到列表並開啓；更新助手後若權限失效，請移除舊條目再重新添加。"
+  },
+  "已打开本地安装器。完成安装后返回应用刷新；全程无需下载。" : {
+    "en" : "Opened the bundled installer. Complete installation, then refresh macntfs. No download required.",
+    "ja" : "同梱インストーラーを開きました。完了後 macntfs に戻り更新してください。ダウンロードは不要です。",
+    "zh-Hant" : "已打開本地安裝器。完成安裝後返回應用刷新；全程無需下載。"
+  },
+  "已是最新版本" : {
+    "en" : "Up to date",
+    "ja" : "最新バージョンです",
+    "zh-Hant" : "已是最新版本"
+  },
+  "已连接" : {
+    "en" : "Connected",
+    "ja" : "接続済み",
+    "zh-Hant" : "已連接"
+  },
+  "应用和后台助手版本不匹配，请更新组件" : {
+    "en" : "The app and helper versions differ. Update components.",
+    "ja" : "アプリとヘルパーのバージョンが異なります。更新してください。",
+    "zh-Hant" : "應用和後台助手版本不匹配，請更新組件"
+  },
+  "应用版本 {app} 与后台助手版本 {helper} 不一致，请安装对应版本并重新启动应用" : {
+    "en" : "App {app} and helper {helper} differ. Install matching components and restart macntfs.",
+    "ja" : "アプリ {app} とヘルパー {helper} のバージョンが異なります。対応するコンポーネントをインストールして再起動してください。",
+    "zh-Hant" : "應用版本 {app} 與後台助手版本 {helper} 不一致，請安裝對應版本並重新啓動應用"
+  },
+  "开启读写" : {
+    "en" : "Enable writing",
+    "ja" : "書き込みを有効化",
+    "zh-Hant" : "開啓讀寫"
+  },
+  "当前应用 v" : {
+    "en" : "Current app v",
+    "ja" : "現在のアプリ v",
+    "zh-Hant" : "當前應用 v"
+  },
+  "当前开发测试包采用临时签名，更新助手后若旧授权失效：在列表移除旧 ntfs-helper，再添加上面的当前助手。仅勾选主应用不能代替助手的磁盘权限。" : {
+    "en" : "This test package uses an ad-hoc signature. If old permissions stop working after an update, remove the old ntfs-helper entry and add the current helper at the path above. Granting access only to the main app does not grant access to the helper.",
+    "ja" : "このテスト版は一時署名を使用します。更新で古い許可が無効になった場合は、古い ntfs-helper を削除し、上記パスの現在のヘルパーを追加してください。メインアプリへの許可だけではヘルパーの権限を代用できません。",
+    "zh-Hant" : "當前開發測試包採用臨時簽名，更新助手後若舊授權失效：在列表移除舊 ntfs-helper，再添加上面的當前助手。僅勾選主應用不能代替助手的磁盤權限。"
+  },
+  "当前测试版使用临时签名，更新组件后可能需要在系统设置移除旧助手条目，再添加当前助手。授权后重新启动应用。" : {
+    "en" : "This test release uses an ad-hoc signature. After updates, you may need to remove the old helper permission entry, add the current helper, and restart macntfs.",
+    "ja" : "このテスト版は一時署名を使用します。更新後は古いヘルパーの権限を削除して現在のヘルパーを追加し、macntfs を再起動する必要がある場合があります。",
+    "zh-Hant" : "當前測試版使用臨時簽名，更新組件後可能需要在系統設置移除舊助手條目，再添加當前助手。授權後重新啓動應用。"
+  },
+  "总容量" : {
+    "en" : "Total capacity",
+    "ja" : "総容量",
+    "zh-Hant" : "總容量"
+  },
+  "我的磁盘" : {
+    "en" : "My disks",
+    "ja" : "ディスク",
+    "zh-Hant" : "我的磁盤"
+  },
+  "所有磁盘操作均在本机完成" : {
+    "en" : "All disk operations run locally",
+    "ja" : "ディスク操作はすべてローカルで実行",
+    "zh-Hant" : "所有磁盤操作均在本機完成"
+  },
+  "打开 Finder" : {
+    "en" : "Open Finder",
+    "ja" : "Finder で開く",
+    "zh-Hant" : "打開 Finder"
+  },
+  "打开 macntfs" : {
+    "en" : "Open macntfs",
+    "ja" : "macntfs を開く",
+    "zh-Hant" : "打開 macntfs"
+  },
+  "打开下载的完整 PKG，按「继续 → 安装」完成系统授权。安装时输入 Mac 登录密码；如果系统显示 Touch ID，也可使用指纹。安装完成后，从 Finder 的「应用程序」打开 macntfs。" : {
+    "en" : "Open the full PKG and choose Continue, then Install. Enter your Mac login password, or use Touch ID if offered. Launch macntfs from Finder > Applications after installation.",
+    "ja" : "完全版 PKG を開き、「続ける → インストール」と進みます。Mac のログインパスワードを入力するか、表示された場合は Touch ID を使用します。完了後、Finder の「アプリケーション」から macntfs を起動します。",
+    "zh-Hant" : "打開下載的完整 PKG，按「繼續 → 安裝」完成系統授權。安裝時輸入 Mac 登錄密碼；如果系統顯示 Touch ID，也可使用指紋。安裝完成後，從 Finder 的「應用程序」打開 macntfs。"
+  },
+  "打开主窗口" : {
+    "en" : "Open main window",
+    "ja" : "メイン画面を開く",
+    "zh-Hant" : "打開主窗口"
+  },
+  "打开助手位置" : {
+    "en" : "Locate helper",
+    "ja" : "ヘルパーの場所を開く",
+    "zh-Hant" : "打開助手位置"
+  },
+  "打开完整磁盘访问" : {
+    "en" : "Open Full Disk Access",
+    "ja" : "フルディスクアクセスを開く",
+    "zh-Hant" : "打開完整磁盤訪問"
+  },
+  "打开本地组件安装器" : {
+    "en" : "Open bundled component installer",
+    "ja" : "同梱コンポーネントのインストーラーを開く",
+    "zh-Hant" : "打開本地組件安裝器"
+  },
+  "打开磁盘访问权限设置" : {
+    "en" : "Open disk access settings",
+    "ja" : "ディスクアクセス設定を開く",
+    "zh-Hant" : "打開磁盤訪問權限設置"
+  },
+  "打开系统授权设置" : {
+    "en" : "Open system approval settings",
+    "ja" : "システム許可の設定を開く",
+    "zh-Hant" : "打開系統授權設置"
+  },
+  "技术详情" : {
+    "en" : "Technical details",
+    "ja" : "技術情報",
+    "zh-Hant" : "技術詳情"
+  },
+  "挂载位置" : {
+    "en" : "Mount location",
+    "ja" : "マウント先",
+    "zh-Hant" : "掛載位置"
+  },
+  "挂载模式" : {
+    "en" : "Mount mode",
+    "ja" : "マウントモード",
+    "zh-Hant" : "掛載模式"
+  },
+  "按步骤完成系统授权。" : {
+    "en" : "Follow the steps for macOS approval.",
+    "ja" : "手順に従って macOS の許可を設定します。",
+    "zh-Hant" : "按步驟完成系統授權。"
+  },
+  "按顺序完成，只需设置一次" : {
+    "en" : "Complete these steps once, in order",
+    "ja" : "順番に設定します。初回のみ必要です",
+    "zh-Hant" : "按順序完成，只需設置一次"
+  },
+  "插入 NTFS 磁盘后会自动显示。" : {
+    "en" : "Inserted NTFS disks appear automatically.",
+    "ja" : "接続した NTFS ディスクは自動で表示されます。",
+    "zh-Hant" : "插入 NTFS 磁盤後會自動顯示。"
+  },
+  "插入 NTFS 磁盘后自动开启读写" : {
+    "en" : "Enable writing when NTFS disks are inserted",
+    "ja" : "NTFS ディスク接続時に書き込みを有効化",
+    "zh-Hant" : "插入 NTFS 磁盤後自動開啓讀寫"
+  },
+  "插入 NTFS 磁盘后自动连接。" : {
+    "en" : "Automatically connect NTFS disks when inserted.",
+    "ja" : "NTFS ディスクの接続時に自動で有効化します。",
+    "zh-Hant" : "插入 NTFS 磁盤後自動連接。"
+  },
+  "插入后自动开启读写" : {
+    "en" : "Enable writing on insertion",
+    "ja" : "接続時に書き込みを有効化",
+    "zh-Hant" : "插入後自動開啓讀寫"
+  },
+  "操作" : {
+    "en" : "Actions",
+    "ja" : "操作",
+    "zh-Hant" : "操作"
+  },
+  "操作处理中，请等待系统响应" : {
+    "en" : "Working. Please wait for macOS.",
+    "ja" : "処理中です。macOS の応答をお待ちください。",
+    "zh-Hant" : "操作處理中，請等待系統響應"
+  },
+  "文件系统" : {
+    "en" : "File system",
+    "ja" : "ファイルシステム",
+    "zh-Hant" : "文件系統"
+  },
+  "是否允许驱动、是否需要重启由 macOS 判断，本向导不能自动读取完整授权状态。" : {
+    "en" : "macOS decides whether driver approval and a restart are needed. This guide cannot read every authorization status automatically.",
+    "ja" : "ドライバーの許可と再起動の要否は macOS が判断します。このガイドではすべての許可状態を自動確認できません。",
+    "zh-Hant" : "是否允許驅動、是否需要重啓由 macOS 判斷，本嚮導不能自動讀取完整授權狀態。"
+  },
+  "暂时无法检查更新，离线功能可继续使用" : {
+    "en" : "Unable to check updates. Offline features remain available unless an update is already required.",
+    "ja" : "更新を確認できません。既知の必須更新がない場合はオフライン機能を利用できます。",
+    "zh-Hant" : "暫時無法檢查更新，離線功能可繼續使用"
+  },
+  "暖灰原生" : {
+    "en" : "Warm native",
+    "ja" : "ウォーム・ネイティブ",
+    "zh-Hant" : "暖灰原生"
+  },
+  "更新失败，请重试" : {
+    "en" : "Update failed. Please retry",
+    "ja" : "更新に失敗しました。再試行してください",
+    "zh-Hant" : "更新失敗，請重試"
+  },
+  "更新时也使用完整安装包，同时更新应用和助手。安装前从菜单栏选择「退出 macntfs」，避免旧版本继续运行。" : {
+    "en" : "Use the full installer for updates too, so the app and helper stay in sync. Quit macntfs from the menu bar before installing.",
+    "ja" : "更新にも完全版を使い、アプリとヘルパーのバージョンを揃えてください。インストール前にメニューバーから macntfs を終了します。",
+    "zh-Hant" : "更新時也使用完整安裝包，同時更新應用和助手。安裝前從菜單欄選擇「退出 macntfs」，避免舊版本繼續運行。"
+  },
+  "未命名磁盘" : {
+    "en" : "Untitled disk",
+    "ja" : "名称未設定のディスク",
+    "zh-Hant" : "未命名磁盤"
+  },
+  "未安装" : {
+    "en" : "Not installed",
+    "ja" : "未インストール",
+    "zh-Hant" : "未安裝"
+  },
+  "未挂载" : {
+    "en" : "Not mounted",
+    "ja" : "未マウント",
+    "zh-Hant" : "未掛載"
+  },
+  "未连接" : {
+    "en" : "Disconnected",
+    "ja" : "未接続",
+    "zh-Hant" : "未連接"
+  },
+  "本地运行 · 离线可用" : {
+    "en" : "Runs locally · Works offline",
+    "ja" : "ローカル動作 · オフライン対応",
+    "zh-Hant" : "本地運行 · 離線可用"
+  },
+  "查看指引" : {
+    "en" : "View guide",
+    "ja" : "ガイドを見る",
+    "zh-Hant" : "查看指引"
+  },
+  "检查更新" : {
+    "en" : "Check for updates",
+    "ja" : "更新を確認",
+    "zh-Hant" : "檢查更新"
+  },
+  "检查更新失败" : {
+    "en" : "Update check failed",
+    "ja" : "更新の確認に失敗",
+    "zh-Hant" : "檢查更新失敗"
+  },
+  "检测到 Windows 休眠或缓存状态。请关闭快速启动并完整关机后重试。" : {
+    "en" : "Windows hibernation or cached state detected. Disable Fast Startup and fully shut down Windows before retrying.",
+    "ja" : "Windows の休止またはキャッシュ状態を検出しました。高速スタートアップを無効にし、完全にシャットダウンしてから再試行してください。",
+    "zh-Hant" : "檢測到 Windows 休眠或緩存狀態。請關閉快速啓動並完整關機後重試。"
+  },
+  "正在处理磁盘，请稍候…" : {
+    "en" : "Working on disk. Please wait…",
+    "ja" : "ディスクを処理しています。お待ちください…",
+    "zh-Hant" : "正在處理磁盤，請稍候…"
+  },
+  "正在更新" : {
+    "en" : "Updating",
+    "ja" : "更新中",
+    "zh-Hant" : "正在更新"
+  },
+  "正在检查更新…" : {
+    "en" : "Checking for updates…",
+    "ja" : "更新を確認中…",
+    "zh-Hant" : "正在檢查更新…"
+  },
+  "正在自动开启读写…" : {
+    "en" : "Enabling write access automatically…",
+    "ja" : "書き込みを自動で有効にしています…",
+    "zh-Hant" : "正在自動開啓讀寫…"
+  },
+  "浅色侧栏 · 石墨按钮" : {
+    "en" : "Light sidebar · Graphite buttons",
+    "ja" : "明るいサイドバー · グラファイトのボタン",
+    "zh-Hant" : "淺色側欄 · 石墨按鈕"
+  },
+  "深色工作台" : {
+    "en" : "Dark workspace",
+    "ja" : "ダーク・ワークスペース",
+    "zh-Hant" : "深色工作台"
+  },
+  "点「打开完整磁盘访问」，在系统设置解锁或完成身份验证。" : {
+    "en" : "Open Full Disk Access and authenticate in System Settings.",
+    "ja" : "「フルディスクアクセスを開く」を押し、システム設定で認証します。",
+    "zh-Hant" : "點「打開完整磁盤訪問」，在系統設置解鎖或完成身份驗證。"
+  },
+  "点下方按钮下载并验证完整安装包。安装器打开后 macntfs 会退出；按系统提示完成安装，再从「应用程序」启动。首次驱动授权和完整磁盘访问不会被自动绕过。" : {
+    "en" : "Download and verify the full installer below. macntfs quits when Installer opens. Complete installation and relaunch from Applications. Driver approval and Full Disk Access are not bypassed.",
+    "ja" : "下のボタンで完全版をダウンロード・検証します。インストーラーが開くと macntfs は終了します。インストール後、「アプリケーション」から再起動してください。ドライバーの許可とフルディスクアクセスは自動で回避しません。",
+    "zh-Hant" : "點下方按鈕下載並驗證完整安裝包。安裝器打開後 macntfs 會退出；按系統提示完成安裝，再從「應用程序」啓動。首次驅動授權和完整磁盤訪問不會被自動繞過。"
+  },
+  "点列表中的「＋」。在文件选择窗口按 Command + Shift + G，粘贴下方路径并回车，再点「打开」。" : {
+    "en" : "Click + in the list. In the file picker, press Command + Shift + G, paste the path below and press Return, then Open.",
+    "ja" : "一覧の「＋」を押します。ファイル選択画面で Command + Shift + G を押し、下のパスを貼り付けて Return を押し、「開く」を選びます。",
+    "zh-Hant" : "點列表中的「＋」。在文件選擇窗口按 Command + Shift + G，粘貼下方路徑並回車，再點「打開」。"
+  },
+  "状态" : {
+    "en" : "Status",
+    "ja" : "状態",
+    "zh-Hant" : "狀態"
+  },
+  "界面风格" : {
+    "en" : "Appearance",
+    "ja" : "外観",
+    "zh-Hant" : "界面風格"
+  },
+  "确认 ntfs-helper 的开关已开启。回到 macntfs 重新检查并重试。" : {
+    "en" : "Turn on ntfs-helper. Return to macntfs, recheck, and retry.",
+    "ja" : "ntfs-helper のスイッチをオンにし、macntfs に戻って再確認・再試行します。",
+    "zh-Hant" : "確認 ntfs-helper 的開關已開啓。回到 macntfs 重新檢查並重試。"
+  },
+  "磁盘" : {
+    "en" : "Disk",
+    "ja" : "ディスク",
+    "zh-Hant" : "磁盤"
+  },
+  "磁盘，自由读写。" : {
+    "en" : "Read and write freely.",
+    "ja" : "ディスクを自由に読み書き。",
+    "zh-Hant" : "磁盤，自由讀寫。"
+  },
+  "磁盘，随时可用。" : {
+    "en" : "Your disks, ready when needed.",
+    "ja" : "ディスクを、いつでも。",
+    "zh-Hant" : "磁盤，隨時可用。"
+  },
+  "磁盘休眠或文件系统异常时会停止开启读写，保护已有数据。" : {
+    "en" : "Write access stays disabled for hibernated or damaged disks to protect your data.",
+    "ja" : "休止状態や異常のあるディスクは、データ保護のため書き込みを有効にしません。",
+    "zh-Hant" : "磁盤休眠或文件系統異常時會停止開啓讀寫，保護已有數據。"
+  },
+  "磁盘尚未挂载" : {
+    "en" : "The disk is not mounted.",
+    "ja" : "ディスクは未マウントです。",
+    "zh-Hant" : "磁盤尚未掛載"
+  },
+  "磁盘已经可以读写" : {
+    "en" : "The disk is already writable.",
+    "ja" : "ディスクはすでに書き込み可能です。",
+    "zh-Hant" : "磁盤已經可以讀寫"
+  },
+  "磁盘未正常推出。请在 Windows 检查磁盘并安全推出后重试。" : {
+    "en" : "The disk was not safely ejected. Check and safely eject it in Windows before retrying.",
+    "ja" : "正常に取り外されていません。Windows で検査し、安全に取り外してから再試行してください。",
+    "zh-Hant" : "磁盤未正常推出。請在 Windows 檢查磁盤並安全推出後重試。"
+  },
+  "磁盘访问" : {
+    "en" : "Disk access",
+    "ja" : "ディスクアクセス",
+    "zh-Hant" : "磁盤訪問"
+  },
+  "磁盘访问授权" : {
+    "en" : "Disk access authorization",
+    "ja" : "ディスクアクセスの許可",
+    "zh-Hant" : "磁盤訪問授權"
+  },
+  "磁盘访问权限" : {
+    "en" : "Disk access permissions",
+    "ja" : "ディスクアクセス権限",
+    "zh-Hant" : "磁盤訪問權限"
+  },
+  "离线安装资源缺失，请重新安装完整 PKG" : {
+    "en" : "Offline resources are missing. Reinstall the full PKG.",
+    "ja" : "オフラインファイルがありません。完全版 PKG を再インストールしてください。",
+    "zh-Hant" : "離線安裝資源缺失，請重新安裝完整 PKG"
+  },
+  "稳定模式（推荐）" : {
+    "en" : "Stable mode (recommended)",
+    "ja" : "安定モード（推奨）",
+    "zh-Hant" : "穩定模式（推薦）"
+  },
+  "稳定模式使用 macFUSE 内核后端。首次安装可能需要系统授权和重启。" : {
+    "en" : "Stable mode uses the macFUSE kernel driver. First use may require approval and a restart.",
+    "ja" : "安定モードは macFUSE のカーネルドライバーを使用します。初回は許可と再起動が必要な場合があります。",
+    "zh-Hant" : "穩定模式使用 macFUSE 內核後端。首次安裝可能需要系統授權和重啓。"
+  },
+  "立即更新" : {
+    "en" : "Update now",
+    "ja" : "今すぐ更新",
+    "zh-Hant" : "立即更新"
+  },
+  "等待连接 NTFS 磁盘" : {
+    "en" : "Waiting for an NTFS disk",
+    "ja" : "NTFS ディスクの接続待ち",
+    "zh-Hant" : "等待連接 NTFS 磁盤"
+  },
+  "等待连接磁盘" : {
+    "en" : "Waiting for a disk",
+    "ja" : "ディスクの接続待ち",
+    "zh-Hant" : "等待連接磁盤"
+  },
+  "简洁办公" : {
+    "en" : "Office",
+    "ja" : "オフィス",
+    "zh-Hant" : "簡潔辦公"
+  },
+  "管理读写组件和 GitHub 版本更新。" : {
+    "en" : "Manage drivers and GitHub updates.",
+    "ja" : "ドライバーと GitHub の更新を管理します。",
+    "zh-Hant" : "管理讀寫組件和 GitHub 版本更新。"
+  },
+  "系统授权" : {
+    "en" : "System approval",
+    "ja" : "システムの許可",
+    "zh-Hant" : "系統授權"
+  },
+  "自动开启读写" : {
+    "en" : "Enable writing automatically",
+    "ja" : "書き込みを自動で有効化",
+    "zh-Hant" : "自動開啓讀寫"
+  },
+  "菜单栏与自动读写" : {
+    "en" : "Menu bar & automatic writing",
+    "ja" : "メニューバーと自動書き込み",
+    "zh-Hant" : "菜單欄與自動讀寫"
+  },
+  "设备侧栏 · 独立操作区" : {
+    "en" : "Device sidebar · Separate actions",
+    "ja" : "デバイスサイドバー · 独立した操作エリア",
+    "zh-Hant" : "設備側欄 · 獨立操作區"
+  },
+  "设备标识" : {
+    "en" : "Device ID",
+    "ja" : "デバイス ID",
+    "zh-Hant" : "設備標識"
+  },
+  "设置" : {
+    "en" : "Settings",
+    "ja" : "設定",
+    "zh-Hant" : "設置"
+  },
+  "设置与更新" : {
+    "en" : "Settings & updates",
+    "ja" : "設定と更新",
+    "zh-Hant" : "設置與更新"
+  },
+  "语言" : {
+    "en" : "Language",
+    "ja" : "言語",
+    "zh-Hant" : "語言"
+  },
+  "请从「应用程序」启动已安装的 macntfs，后台助手不接受其他程序" : {
+    "en" : "Launch installed macntfs from Applications. The helper rejects other applications.",
+    "ja" : "インストール済み macntfs をアプリケーションから起動してください。ヘルパーは他のプログラムを許可しません。",
+    "zh-Hant" : "請從「應用程序」啓動已安裝的 macntfs，後台助手不接受其他程序"
+  },
+  "请先安装内置读写组件" : {
+    "en" : "Install the bundled drivers first.",
+    "ja" : "同梱ドライバーを先にインストールしてください。",
+    "zh-Hant" : "請先安裝內置讀寫組件"
+  },
+  "请先完成离线驱动安装" : {
+    "en" : "Complete the offline driver installation first.",
+    "ja" : "最初にオフラインドライバーをインストールしてください。",
+    "zh-Hant" : "請先完成離線驅動安裝"
+  },
+  "请安装内置 macFUSE，并完成 macOS 系统授权。" : {
+    "en" : "Install bundled macFUSE and complete macOS approval.",
+    "ja" : "内蔵 macFUSE をインストールし、macOS で許可してください。",
+    "zh-Hant" : "請安裝內置 macFUSE，並完成 macOS 系統授權。"
+  },
+  "请安装组件并从应用程序启动" : {
+    "en" : "Install components and launch from Applications",
+    "ja" : "コンポーネントをインストールし、アプリケーションから起動してください",
+    "zh-Hant" : "請安裝組件並從應用程序啓動"
+  },
+  "读写引擎" : {
+    "en" : "File system driver",
+    "ja" : "ファイルシステムドライバー",
+    "zh-Hant" : "讀寫引擎"
+  },
+  "读写组件尚未安装或版本不一致" : {
+    "en" : "Drivers missing or versions do not match",
+    "ja" : "ドライバーが未インストール、またはバージョンが不一致",
+    "zh-Hant" : "讀寫組件尚未安裝或版本不一致"
+  },
+  "读写组件版本检查通过" : {
+    "en" : "Driver version check passed",
+    "ja" : "ドライバーのバージョン確認済み",
+    "zh-Hant" : "讀寫組件版本檢查通過"
+  },
+  "读写组件版本需要更新，请点击安装组件" : {
+    "en" : "Driver components need updating. Choose Install components.",
+    "ja" : "ドライバーの更新が必要です。コンポーネントをインストールしてください。",
+    "zh-Hant" : "讀寫組件版本需要更新，請點擊安裝組件"
+  },
+  "跟随系统" : {
+    "en" : "System default",
+    "ja" : "システムに従う",
+    "zh-Hant" : "跟隨系統"
+  },
+  "软件更新" : {
+    "en" : "Software updates",
+    "ja" : "ソフトウェア更新",
+    "zh-Hant" : "軟件更新"
+  },
+  "连接 NTFS 格式的 USB 磁盘后，会自动显示在这里。" : {
+    "en" : "Connect an NTFS USB disk to see it here.",
+    "ja" : "NTFS 形式の USB ディスクを接続すると、ここに表示されます。",
+    "zh-Hant" : "連接 NTFS 格式的 USB 磁盤後，會自動顯示在這裡。"
+  },
+  "连接 NTFS 磁盘，回到「我的磁盘」确认显示「可读写」。助手连接成功不代表已经取得所有磁盘权限；以实际挂载结果为准。Windows 休眠或损坏的磁盘不会强行开启读写。" : {
+    "en" : "Connect an NTFS disk and confirm Read & write in My disks. Helper connectivity alone does not prove all disk permissions are granted; check the actual mount result. Hibernated or damaged Windows disks will not be forced writable.",
+    "ja" : "NTFS ディスクを接続し、「ディスク」で「読み書き可能」を確認します。ヘルパー接続だけではすべてのアクセス権限を確認できないため、実際のマウント結果を確認してください。Windows の休止状態や損傷のあるディスクは強制的に書き込み可能にしません。",
+    "zh-Hant" : "連接 NTFS 磁盤，回到「我的磁盤」確認顯示「可讀寫」。助手連接成功不代表已經取得所有磁盤權限；以實際掛載結果為準。Windows 休眠或損壞的磁盤不會強行開啓讀寫。"
+  },
+  "连接外置 NTFS 磁盘，轻松管理读写。" : {
+    "en" : "Connect an external NTFS disk to manage read and write access.",
+    "ja" : "外付け NTFS ディスクを接続して、読み書きを管理します。",
+    "zh-Hant" : "連接外置 NTFS 磁盤，輕鬆管理讀寫。"
+  },
+  "退出" : {
+    "en" : "Quit",
+    "ja" : "終了",
+    "zh-Hant" : "退出"
+  },
+  "退出 macntfs" : {
+    "en" : "Quit macntfs",
+    "ja" : "macntfs を終了",
+    "zh-Hant" : "退出 macntfs"
+  },
+  "适用于 M1、M2、M3 等 Apple 芯片，且你选择了稳定内核模式。驱动已正常工作时可跳过，不需要每次重启。调整为「降低安全性」会放宽对第三方内核扩展的限制，请了解后由你自行决定。" : {
+    "en" : "These steps apply to stable kernel mode on Apple silicon, including M1, M2 and M3. Skip them if the driver already works. Reduced Security relaxes restrictions on third-party kernel extensions; decide whether to allow it yourself.",
+    "ja" : "M1、M2、M3 などの Apple シリコンで安定カーネルモードを使う場合の手順です。正常動作している場合は不要です。「低セキュリティ」は他社のカーネル拡張機能への制限を緩和します。内容を理解した上で判断してください。",
+    "zh-Hant" : "適用於 M1、M2、M3 等 Apple 芯片，且你選擇了穩定內核模式。驅動已正常工作時可跳過，不需要每次重啓。調整為「降低安全性」會放寬對第三方內核擴展的限制，請瞭解後由你自行決定。"
+  },
+  "选择「降低安全性」，勾选「允许用户管理来自被认可开发者的内核扩展」（不同系统版本翻译可能略有差异），确认并输入密码。" : {
+    "en" : "Choose Reduced Security and allow user management of kernel extensions from identified developers. Confirm and enter the password. Wording may vary by macOS version.",
+    "ja" : "「低セキュリティ」を選び、「確認済みの開発元から提供されたカーネル拡張機能のユーザによる管理を許可」にチェックを入れ、確認してパスワードを入力します。表記はバージョンによって異なる場合があります。",
+    "zh-Hant" : "選擇「降低安全性」，勾選「允許用戶管理來自被認可開發者的內核擴展」（不同系統版本翻譯可能略有差異），確認並輸入密碼。"
+  },
+  "选择安装 macOS 的启动磁盘（通常是 Macintosh HD），点击「安全策略」。" : {
+    "en" : "Select the macOS startup disk, usually Macintosh HD, then choose Security Policy.",
+    "ja" : "macOS の起動ディスク（通常は Macintosh HD）を選択し、「セキュリティポリシー」を開きます。",
+    "zh-Hant" : "選擇安裝 macOS 的啓動磁盤（通常是 Macintosh HD），點擊「安全策略」。"
+  },
+  "选择齿轮图标「选项 → 继续」，按提示选择管理员并输入密码。" : {
+    "en" : "Choose Options > Continue. Select an administrator and enter the password when asked.",
+    "ja" : "歯車の「オプション → 続ける」を選択し、管理者を選んでパスワードを入力します。",
+    "zh-Hant" : "選擇齒輪圖標「選項 → 繼續」，按提示選擇管理員並輸入密碼。"
+  },
+  "邮箱：473276@qq.com" : {
+    "en" : "Email: 473276@qq.com",
+    "ja" : "メール：473276@qq.com",
+    "zh-Hant" : "郵箱：473276@qq.com"
+  },
+  "重新启动回到 macOS，打开「系统设置 → 隐私与安全性」，允许 macFUSE / Benjamin Fleischer 的扩展；如系统要求，再重启一次。" : {
+    "en" : "Restart into macOS. Open System Settings > Privacy & Security and allow macFUSE / Benjamin Fleischer. Restart again if requested.",
+    "ja" : "macOS を再起動し、「システム設定 → プライバシーとセキュリティ」で macFUSE / Benjamin Fleischer を許可します。求められた場合は再度再起動します。",
+    "zh-Hant" : "重新啓動回到 macOS，打開「系統設置 → 隱私與安全性」，允許 macFUSE / Benjamin Fleischer 的擴展；如系統要求，再重啓一次。"
+  },
+  "重新检查" : {
+    "en" : "Recheck",
+    "ja" : "再確認",
+    "zh-Hant" : "重新檢查"
+  },
+  "需要更新" : {
+    "en" : "Update required",
+    "ja" : "更新が必要です",
+    "zh-Hant" : "需要更新"
+  },
+  "需要更新 macntfs 后才能开启读写" : {
+    "en" : "Update macntfs before enabling write access.",
+    "ja" : "書き込みを有効にする前に macntfs を更新してください。",
+    "zh-Hant" : "需要更新 macntfs 後才能開啓讀寫"
+  },
+  "顶部导航 · 钢蓝重点色" : {
+    "en" : "Top navigation · Steel blue accents",
+    "ja" : "上部ナビゲーション · スチールブルー",
+    "zh-Hant" : "頂部導航 · 鋼藍重點色"
+  },
+  "首次使用向导" : {
+    "en" : "Getting started",
+    "ja" : "初回設定ガイド",
+    "zh-Hant" : "首次使用嚮導"
+  },
+  "默认「稳定模式」使用 macFUSE 内核驱动。首次使用或更新 macFUSE 后，若系统提示扩展被阻止，打开「系统设置 → 隐私与安全性」，找到 macFUSE / Benjamin Fleischer 的提示并选择「允许」，按提示验证并重启。" : {
+    "en" : "Stable mode uses the macFUSE kernel driver. After installation or updates, if macOS blocks the extension, open System Settings > Privacy & Security. Allow macFUSE / Benjamin Fleischer, authenticate, and restart as requested.",
+    "ja" : "安定モードは macFUSE カーネルドライバーを使用します。インストールや更新後に拡張機能がブロックされた場合、「システム設定 → プライバシーとセキュリティ」で macFUSE / Benjamin Fleischer を許可し、認証して必要に応じて再起動してください。",
+    "zh-Hant" : "默認「穩定模式」使用 macFUSE 內核驅動。首次使用或更新 macFUSE 後，若系統提示擴展被阻止，打開「系統設置 → 隱私與安全性」，找到 macFUSE / Benjamin Fleischer 的提示並選擇「允許」，按提示驗證並重啓。"
+  }
+}

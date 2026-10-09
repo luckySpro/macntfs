@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod i18n;
 mod native_lifecycle;
 mod updates;
 use macntfs_core::{
@@ -29,11 +30,13 @@ struct Snapshot {
     settings: Settings,
     version: &'static str,
     monitor: Monitor,
+    required_update: Option<updates::Available>,
 }
 #[tauri::command]
 async fn snapshot(app: tauri::AppHandle) -> Result<Snapshot, String> {
     tauri::async_runtime::spawn_blocking(move || {
         Ok(Snapshot {
+            required_update: updates::required(&app),
             volumes: system::scan()?,
             environment: system::environment(),
             settings: Settings::load(),
@@ -89,6 +92,7 @@ async fn operate(
     volume: Option<system::Volume>,
     backend: Backend,
 ) -> Result<String, String> {
+    updates::guard_operation(&action, updates::required(&app).is_some())?;
     {
         let state = app.state::<Mutex<Monitor>>();
         let mut monitor = state.lock().map_err(|e| e.to_string())?;
@@ -131,6 +135,9 @@ fn apply_window_theme(app: &tauri::AppHandle, theme: Theme) -> tauri::Result<()>
 fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     let state = app.state::<SettingsState>();
     let _guard = state.0.lock().map_err(|e| e.to_string())?;
+    if !["auto", "zh-Hans", "zh-Hant", "en", "ja"].contains(&settings.language.as_str()) {
+        return Err("Unsupported language".into());
+    }
     settings.save()?;
     let handle = app.clone();
     let theme = settings.theme;
@@ -239,14 +246,14 @@ fn tray_menu(
     menu.append(&MenuItem::with_id(
         app,
         "show",
-        "打开 macntfs",
+        i18n::text("打开 macntfs"),
         true,
         None::<&str>,
     )?)?;
     menu.append(&CheckMenuItem::with_id(
         app,
         "auto",
-        "插入 NTFS 磁盘后自动开启读写",
+        i18n::text("插入 NTFS 磁盘后自动开启读写"),
         true,
         Settings::load().auto_mount,
         None::<&str>,
@@ -256,20 +263,29 @@ fn tray_menu(
         app,
         "service-status",
         if ready {
-            "后台助手已就绪 · 挂载无需密码"
+            i18n::text("后台助手已就绪 · 挂载无需密码")
         } else {
-            "请安装组件并从应用程序启动"
+            i18n::text("请安装组件并从应用程序启动")
         },
         false,
         None::<&str>,
     )?)?;
+    if let Some(update) = updates::required(app) {
+        menu.append(&MenuItem::with_id(
+            app,
+            "show-update",
+            format!("{} · v{}", i18n::text("需要更新"), update.version),
+            true,
+            None::<&str>,
+        )?)?;
+    }
     for volume in &monitor.volumes {
         let state = if volume.mount.is_empty() {
-            "未挂载"
+            i18n::text("未挂载")
         } else if volume.writable {
-            "可读写"
+            i18n::text("可读写")
         } else {
-            "只读"
+            i18n::text("只读")
         };
         menu.append(&PredefinedMenuItem::separator(app)?)?;
         menu.append(&MenuItem::with_id(
@@ -282,21 +298,24 @@ fn tray_menu(
         menu.append(&MenuItem::with_id(
             app,
             format!("open:{}", volume.uuid),
-            "在 Finder 中打开",
+            i18n::text("在 Finder 中打开"),
             !monitor.busy && !volume.mount.is_empty(),
             None::<&str>,
         )?)?;
         menu.append(&MenuItem::with_id(
             app,
             format!("mount:{}", volume.uuid),
-            "开启读写",
-            ready && !monitor.busy && (!volume.writable || volume.mount.is_empty()),
+            i18n::text("开启读写"),
+            ready
+                && updates::required(app).is_none()
+                && !monitor.busy
+                && (!volume.writable || volume.mount.is_empty()),
             None::<&str>,
         )?)?;
         menu.append(&MenuItem::with_id(
             app,
             format!("eject:{}", volume.uuid),
-            "安全推出整块磁盘",
+            i18n::text("安全推出整块磁盘"),
             !monitor.busy,
             None::<&str>,
         )?)?;
@@ -305,7 +324,7 @@ fn tray_menu(
         menu.append(&MenuItem::with_id(
             app,
             "empty",
-            "等待连接 NTFS 磁盘",
+            i18n::text("等待连接 NTFS 磁盘"),
             false,
             None::<&str>,
         )?)?;
@@ -325,7 +344,7 @@ fn tray_menu(
     menu.append(&MenuItem::with_id(
         app,
         "quit",
-        "退出 macntfs",
+        i18n::text("退出 macntfs"),
         true,
         None::<&str>,
     )?)?;
@@ -333,7 +352,7 @@ fn tray_menu(
 }
 fn menu_action(app: &tauri::AppHandle, id: &str) {
     match id {
-        "show" => show_window(app),
+        "show" | "show-update" => show_window(app),
         "quit" => app.exit(0),
         "auto" => {
             let state = app.state::<SettingsState>();
@@ -369,6 +388,10 @@ fn menu_action(app: &tauri::AppHandle, id: &str) {
         }
         _ => {
             if let Some((action, uuid)) = id.split_once(':') {
+                if updates::guard_operation(action, updates::required(app).is_some()).is_err() {
+                    show_window(app);
+                    return;
+                }
                 if !matches!(action, "open" | "mount" | "eject") {
                     return;
                 }
@@ -417,7 +440,7 @@ fn start_monitor(app: tauri::AppHandle) {
                 if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
                     monitor.volumes = volumes.clone();
                 }
-                if settings.auto_mount && ready {
+                if settings.auto_mount && ready && updates::required(&app).is_none() {
                     for volume in &volumes {
                         if (!volume.writable || volume.mount.is_empty())
                             && !attempted.contains(&volume.uuid)
@@ -448,8 +471,14 @@ fn start_monitor(app: tauri::AppHandle) {
                     .lock()
                     .map(|m| m.clone())
                     .unwrap_or_default();
-                let key = serde_json::to_string(&(&monitor, ready, settings.auto_mount))
-                    .unwrap_or_default();
+                let key = serde_json::to_string(&(
+                    &monitor,
+                    ready,
+                    settings.auto_mount,
+                    &settings.language,
+                    updates::required(&app),
+                ))
+                .unwrap_or_default();
                 if key != last_menu {
                     last_menu = key;
                     let handle = app.clone();
@@ -491,6 +520,18 @@ fn main() {
             let handle = app.handle();
             native_lifecycle::install(handle.clone())?;
             apply_window_theme(handle, Settings::load().theme)?;
+            updates::restore(handle);
+            let updater_app = handle.clone();
+            std::thread::spawn(move || {
+                loop {
+                    let _ = tauri::async_runtime::block_on(updates::check_updates(
+                        updater_app.clone(),
+                        updater_app.state::<updates::Pending>(),
+                    ));
+                    // Recheck periodically even while the main window stays hidden.
+                    std::thread::sleep(Duration::from_secs(3600));
+                }
+            });
             let tray = TrayIconBuilder::with_id("macntfs")
                 .icon(tray_image())
                 .icon_as_template(true)
