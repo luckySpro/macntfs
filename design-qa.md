@@ -45,3 +45,7 @@ Follow-up P3: native macOS icon material and illustration proportions can be ref
 用户截图中的圆角露白源于不透明的窗口与文档背景。快捷面板开启 Tauri macOS 透明窗口功能，并仅将面板 html/body/#app 背景设为透明；主窗口背景保持原主题。顶部原生下拉框移除，主题切换集中在设置页的卡片。三种风格切换与重载保存通过，1060×760 与 760×600 无横向溢出。`/tmp/macntfs-qa/panel-{Stone,Office,Graphite}.png` 以透明截图保存，Pillow 检查四角 alpha 均为 0。
 
 CUA 查看实际 WebKit 主窗口和快捷面板，顶部按钮排布正常；原生截图为 RGB，捕获时透明区域显示白色，不能用此截图断言桌面合成后的角落颜色。原生窗口透明配置及 macos-private-api 编译通过。磁盘操作使用模拟 IPC 回归，无真实推出、挂载或写入。
+
+## 0.3.11 原生标题栏配色
+
+主窗口采用 Transparent 原生标题栏样式（非无边框、非覆盖内容），保留系统拖动和窗口控制。Rust 启动与保存主题时同步原生明暗外观及背景颜色。CUA 实际切换 Stone、Office、Graphite 并截图，检查标题栏采样点 (1800,30)，RGB 分别为 (250,250,248)、(248,249,251)、(32,36,39)，与主题画布颜色误差不超过 2。重启测试应用后深色标题栏恢复，RGB 同为 (32,36,39)。截图保存在 `/tmp/macntfs-qa/title-*.png`。测试结束恢复原 Graphite 选择；未操作真实磁盘。

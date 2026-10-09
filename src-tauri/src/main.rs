@@ -2,7 +2,7 @@
 mod native_lifecycle;
 mod updates;
 use macntfs_core::{
-    settings::{Backend, Settings},
+    settings::{Backend, Settings, Theme},
     system,
 };
 use std::{
@@ -108,11 +108,36 @@ async fn operate(
 }
 #[derive(Default)]
 struct SettingsState(Mutex<()>);
+// Keep Cocoa title text and titlebar background aligned with the saved palette.
+fn apply_window_theme(app: &tauri::AppHandle, theme: Theme) -> tauri::Result<()> {
+    if let Some(window) = app.get_webview_window("main") {
+        let (appearance, color) = match theme {
+            Theme::Stone => (
+                tauri::Theme::Light,
+                tauri::window::Color(250, 250, 248, 255),
+            ),
+            Theme::Office => (
+                tauri::Theme::Light,
+                tauri::window::Color(248, 249, 250, 255),
+            ),
+            Theme::Graphite => (tauri::Theme::Dark, tauri::window::Color(32, 36, 38, 255)),
+        };
+        window.set_theme(Some(appearance))?;
+        window.set_background_color(Some(color))?;
+    }
+    Ok(())
+}
 #[tauri::command]
 fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     let state = app.state::<SettingsState>();
     let _guard = state.0.lock().map_err(|e| e.to_string())?;
     settings.save()?;
+    let handle = app.clone();
+    let theme = settings.theme;
+    app.run_on_main_thread(move || {
+        let _ = apply_window_theme(&handle, theme);
+    })
+    .map_err(|e| e.to_string())?;
     let _ = app.emit("devices-changed", ());
     Ok(())
 }
@@ -465,6 +490,7 @@ fn main() {
         .setup(|app| {
             let handle = app.handle();
             native_lifecycle::install(handle.clone())?;
+            apply_window_theme(handle, Settings::load().theme)?;
             let tray = TrayIconBuilder::with_id("macntfs")
                 .icon(tray_image())
                 .icon_as_template(true)
