@@ -1,0 +1,34 @@
+name: Pull request checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+      - name: Build frontend
+        run: npm ci && npm run build
+      - name: Test Rust workspace
+        run: cargo test --locked --workspace
+      - name: Lint Rust workspace
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
