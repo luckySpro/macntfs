@@ -9,6 +9,8 @@ pub struct Session {
     pub uuid: String,
     pub backend: String,
     pub target: String,
+    #[serde(default)]
+    pub disconnected: bool,
 }
 #[derive(Clone, Debug)]
 pub struct MountEntry {
@@ -73,6 +75,12 @@ pub fn validate_mounted_backend(
     requested: &str,
     sessions: &[Session],
 ) -> Result<()> {
+    if sessions
+        .iter()
+        .any(|s| s.disconnected && (s.id == volume.id || s.uuid == volume.uuid))
+    {
+        return Err("磁盘断开后的残留会话正在清理，请稍后重试".into());
+    }
     let recorded = sessions
         .iter()
         .find(|s| s.id == volume.id && s.uuid == volume.uuid && s.target == volume.mount);
@@ -105,14 +113,32 @@ pub fn record_at(volume: &Volume, backend: &str, target: &str) -> Result<()> {
         uuid: volume.uuid.clone(),
         backend: backend.into(),
         target: target.into(),
+        disconnected: false,
     });
+    save(&sessions)
+}
+pub(crate) fn forget(target: &str) -> Result<()> {
+    let mut sessions = load()?;
+    sessions.retain(|s| s.target != target);
+    save(&sessions)
+}
+pub(crate) fn mark_disconnected(target: &str) -> Result<()> {
+    let mut sessions = load()?;
+    for s in &mut sessions {
+        if s.target == target {
+            s.disconnected = true;
+        }
+    }
+    save(&sessions)
+}
+fn save(sessions: &[Session]) -> Result<()> {
     let temporary = Path::new(RUNTIME).join("sessions.tmp");
     if temporary.exists() {
         crate::privileged::check_root_path(&temporary)?;
     }
     fs::write(
         &temporary,
-        serde_json::to_vec(&sessions).map_err(|e| e.to_string())?,
+        serde_json::to_vec(sessions).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
     fs::set_permissions(&temporary, fs::Permissions::from_mode(0o644))
@@ -123,7 +149,7 @@ pub fn reconcile(volumes: &mut [Volume], sessions: &[Session], table: &[MountEnt
     for v in volumes {
         if let Some(s) = sessions
             .iter()
-            .find(|s| s.id == v.id && s.uuid == v.uuid && s.backend == "microvm")
+            .find(|s| !s.disconnected && s.id == v.id && s.uuid == v.uuid && s.backend == "microvm")
             && let Some(m) = table
                 .iter()
                 .find(|m| m.target == s.target && m.kind == "nfs" && is_loopback_source(&m.source))
@@ -175,6 +201,7 @@ mod tests {
             writable: false,
         };
         let s = Session {
+            disconnected: false,
             id: v.id.clone(),
             uuid: v.uuid.clone(),
             backend: "microvm".into(),
@@ -225,6 +252,7 @@ mod tests {
         assert!(validate_mounted_backend(&volume, "microvm", &[]).is_err());
         volume.mount = target(&volume.id, "microvm");
         let record = Session {
+            disconnected: false,
             id: volume.id.clone(),
             uuid: volume.uuid.clone(),
             backend: "microvm".into(),

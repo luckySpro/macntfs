@@ -505,6 +505,7 @@ pub(crate) fn eject(id: &str, uuid: &str) -> Result<String> {
             if target.exists() && check_root_path(target).is_ok() {
                 let _ = fs::remove_dir(target);
             }
+            crate::sessions::forget(&session.target)?;
         }
     }
     if !volume

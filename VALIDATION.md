@@ -210,3 +210,11 @@ Installed 0.3.20 still had root-owned `/etc/lvm` mode 0700: macOS Installer reta
 ### 0.3.22 MicroVM volume names
 
 MicroVM mounts now use the original NTFS label as the Finder-visible mount point, with safe character normalization and collision suffixes. Root session records retain the actual target, and recognition, update guards and safe eject include named NFS mounts. Legacy session paths remain supported. Empty recorded mount points are removed only after normal unmount. Live 0.3.21 NFS mounting has been observed. A macOS NSWorkspace custom-volume-icon attempt failed on the live NFS volume; its newly created icon files were removed and no unsupported icon workaround is shipped. NFS Finder icon parity remains unavailable in this release.
+
+### 0.3.23 unexpected disconnect handling
+
+The privileged helper detects missing physical partitions independently of the GUI, persists disconnected MicroVM sessions, and attempts normal teardown after three successful scans. Failed teardown retains the record and retries; a reappearing disk identifier cannot make the stale session writable again. Successful safe eject removes its session record. No forced unmount, forced repair, or writer termination is introduced.
+
+28 Rust tests and strict clippy passed, including backend scoping and identifier-reappearance checks. On the installed 0.3.22 system, Finder's desktop Connected servers setting was enabled and BackUp was added to the native sidebar; its external-drive description and eject button were observed. The setup guide now explains these settings in four languages. Actual desktop pixels and physical forced-unplug behavior have not been verified. Pending writes can still be lost on physical removal; install the new helper before testing disconnect handling.
+
+0.3.23 full offline package validation, installer-mode checks and mocked four-language UI regression passed. No physical disconnect or updated installed-helper cleanup was exercised.

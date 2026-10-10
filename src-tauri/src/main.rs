@@ -469,6 +469,20 @@ fn start_monitor(app: tauri::AppHandle) {
                 let present: HashSet<String> = volumes.iter().map(|v| v.uuid.clone()).collect();
                 attempted.retain(|id| present.contains(id));
                 if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
+                    let sessions = macntfs_core::sessions::load().unwrap_or_default();
+                    if !monitor.busy
+                        && monitor.volumes.iter().any(|old| {
+                            !present.contains(&old.uuid)
+                                && sessions.iter().any(|s| {
+                                    s.backend == "microvm"
+                                        && s.uuid == old.uuid
+                                        && s.target == old.mount
+                                })
+                        })
+                    {
+                        monitor.last_event = "磁盘意外断开，后台助手将正常清理残留挂载。未完成的写入可能丢失；重新连接后会再次检查磁盘状态。".into();
+                        monitor.last_error = true;
+                    }
                     monitor.volumes = volumes.clone();
                 }
                 if settings.auto_mount

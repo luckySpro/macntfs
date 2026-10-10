@@ -1288,5 +1288,30 @@
     "en" : "MicroVM operation failed. No forced recovery or unmount was performed.",
     "ja" : "マイクロVM の操作に失敗しました。強制的な復旧や取り外しは行っていません。",
     "zh-Hant" : "微虛擬機操作失敗。未強制修復或卸載磁碟。"
+  },
+  "桌面与访达入口": {
+    "en": "Desktop and Finder access",
+    "ja": "デスクトップと Finder への表示",
+    "zh-Hant": "桌面與 Finder 入口"
+  },
+  "磁盘断开后的残留会话正在清理，请稍后重试": {
+    "en": "Cleaning up the disconnected session. Please try again shortly.",
+    "ja": "切断されたセッションを処理しています。しばらくしてから再試行してください。",
+    "zh-Hant": "正在清理磁碟斷開後的殘留工作階段，請稍後重試"
+  },
+  "磁盘意外断开，后台助手将正常清理残留挂载。未完成的写入可能丢失；重新连接后会再次检查磁盘状态。": {
+    "en": "Disk unexpectedly disconnected. The helper will attempt normal cleanup. Incomplete writes may be lost. The disk will be checked again after reconnection.",
+    "ja": "ディスクが予期せず切断されました。通常の後処理を試みます。未完了の書き込みが失われる可能性があります。再接続後に再確認します。",
+    "zh-Hant": "磁碟意外斷開，背景助手將正常清理殘留掛載。未完成的寫入可能遺失；重新連接後會再次檢查磁碟狀態。"
+  },
+  "在访达设置的「通用」中勾选「已连接的服务器」，即可显示桌面卷入口。在访达打开磁盘后，选择「文件 → 添加到边栏」，即可用硬盘名称快速访问。": {
+    "en": "In Finder Settings → General, enable Connected servers to show the volume on your desktop. Open the disk in Finder and choose File → Add to Sidebar for quick access by name.",
+    "ja": "Finder の設定 → 一般で「接続中のサーバ」を有効にすると、デスクトップに表示されます。ディスクを開き「ファイル → サイドバーに追加」を選ぶと、名前でアクセスできます。",
+    "zh-Hant": "在 Finder 設定的「一般」中勾選「已連接的伺服器」，即可顯示桌面入口。開啟磁碟後選擇「檔案 → 加入側邊欄」，即可用硬碟名稱快速存取。"
+  },
+  "拔盘前请使用 macntfs 的「安全推出」。异常断开后后台会尝试正常清理残留；无法保证未完成写入的数据完整，不会自动强行修复磁盘。": {
+    "en": "Use macntfs Safe eject before unplugging. After an unexpected disconnect, the helper attempts normal cleanup. Incomplete writes may be lost; automatic forced repair is never performed.",
+    "ja": "取り外す前に「安全に取り出す」を使用してください。予期しない切断後は通常の後処理を試みます。未完了の書き込みの完全性は保証できません。自動の強制修復は行いません。",
+    "zh-Hant": "拔除前請使用「安全退出」。異常斷開後背景會嘗試正常清理殘留；無法保證未完成寫入的資料完整，不會自動強制修復磁碟。"
   }
 }

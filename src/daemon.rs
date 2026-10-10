@@ -332,6 +332,86 @@ fn dispatch(req: Request, lock: &Mutex<()>) -> Result<String> {
         _ => Err("后台助手仅允许状态检查、安全挂载、推出和更新检查".into()),
     }
 }
+fn missing_vm<'a>(
+    sessions: &'a [crate::sessions::Session],
+    ids: &std::collections::HashSet<String>,
+) -> Vec<&'a crate::sessions::Session> {
+    sessions
+        .iter()
+        .filter(|s| s.backend == "microvm" && (s.disconnected || !ids.contains(&s.id)))
+        .collect()
+}
+fn start_disconnect_watch(lock: Arc<Mutex<()>>) {
+    std::thread::spawn(move || {
+        let mut absent = std::collections::HashMap::<String, u32>::new();
+        loop {
+            std::thread::sleep(Duration::from_secs(2));
+            let Ok(_guard) = lock.try_lock() else {
+                continue;
+            };
+            let Ok(ids) = crate::system::external_ids() else {
+                absent.clear();
+                continue;
+            };
+            let Ok(sessions) = crate::sessions::load() else {
+                absent.clear();
+                continue;
+            };
+            let missing = missing_vm(&sessions, &ids);
+            absent.retain(|target, _| missing.iter().any(|s| &s.target == target));
+            for session in missing {
+                if !session.disconnected
+                    && crate::sessions::mark_disconnected(&session.target).is_err()
+                {
+                    continue;
+                }
+                let count = absent.entry(session.target.clone()).or_default();
+                *count = count.saturating_add(1);
+                // Require three successful scans. Failed cleanup retries at most
+                // every 30 seconds; scan failure or reappearance cancels debounce.
+                if *count < 3 || !(*count - 3).is_multiple_of(15) {
+                    continue;
+                }
+                let result = release_disconnected(session);
+                match result {
+                    Ok(()) => {
+                        absent.remove(&session.target);
+                        eprintln!("macntfs: disconnected MicroVM session released normally");
+                    }
+                    Err(error) => {
+                        eprintln!("macntfs: disconnected session retained for retry: {error}")
+                    }
+                }
+            }
+        }
+    });
+}
+fn release_disconnected(session: &crate::sessions::Session) -> Result<()> {
+    // Recheck under the shared operation lock. Never detach a present device,
+    // force an unmount, send SIGKILL, or repair an unplugged filesystem.
+    if !session.disconnected && crate::system::external_ids()?.contains(&session.id) {
+        return Ok(());
+    }
+    let mounts = crate::sessions::mount_table()?;
+    if mounts.iter().any(|m| {
+        m.target == session.target
+            && (m.kind != "nfs" || !crate::sessions::is_loopback_source(&m.source))
+    }) {
+        return Err("残留路径由其他文件系统使用，已停止清理".into());
+    }
+    crate::microvm::command(&["unmount", &session.target, "--wait-for-vm", "30"], 40)?;
+    if crate::sessions::mount_table()?
+        .iter()
+        .any(|m| m.target == session.target)
+    {
+        return Err("残留挂载仍在使用，将稍后重试".into());
+    }
+    let target = Path::new(&session.target);
+    if target.exists() && privileged::check_root_path(target).is_ok() {
+        let _ = fs::remove_dir(target);
+    }
+    crate::sessions::forget(&session.target)
+}
 pub fn serve() -> Result<()> {
     if unsafe { libc::geteuid() } != 0 {
         return Err("后台助手必须由系统以 root 启动".into());
@@ -346,6 +426,7 @@ pub fn serve() -> Result<()> {
     let listener = UnixListener::bind(SOCKET).map_err(|e| e.to_string())?;
     fs::set_permissions(SOCKET, fs::Permissions::from_mode(0o666)).map_err(|e| e.to_string())?;
     let lock = Arc::new(Mutex::new(()));
+    start_disconnect_watch(lock.clone());
     let count = Arc::new(AtomicUsize::new(0));
     for incoming in listener.incoming() {
         let Ok(mut stream) = incoming else { continue };
@@ -380,6 +461,39 @@ pub fn serve() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn disconnect_cleanup_is_scoped_and_survives_identifier_reappearance() {
+        let vm = crate::sessions::Session {
+            id: "disk4s3".into(),
+            uuid: "a".into(),
+            backend: "microvm".into(),
+            target: "/Volumes/BackUp".into(),
+            disconnected: false,
+        };
+        let mut records = vec![vm.clone()];
+        let present = std::collections::HashSet::from(["disk4s3".to_owned()]);
+        assert!(missing_vm(&records, &present).is_empty());
+        assert_eq!(
+            missing_vm(&records, &std::collections::HashSet::new()).len(),
+            1
+        );
+        records[0].disconnected = true;
+        assert_eq!(missing_vm(&records, &present).len(), 1);
+        records[0].backend = "kernel".into();
+        assert!(missing_vm(&records, &std::collections::HashSet::new()).is_empty());
+        let v = crate::system::Volume {
+            id: vm.id.clone(),
+            uuid: vm.uuid.clone(),
+            parent: "disk4".into(),
+            name: "BackUp".into(),
+            mount: vm.target.clone(),
+            writable: true,
+            size: 32,
+            free: 0,
+        };
+        records[0].backend = "microvm".into();
+        assert!(crate::sessions::validate_mounted_backend(&v, "microvm", &records).is_err());
+    }
     #[test]
     fn daemon_rejects_non_mount_operations() {
         for action in ["format", "execute", "install", "status"] {

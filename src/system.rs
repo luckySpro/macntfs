@@ -154,19 +154,23 @@ fn parse_volume(value: &Value) -> Result<Volume> {
         writable: boolean(d, "WritableVolume"),
     })
 }
-pub(crate) fn scan_physical() -> Result<Vec<Volume>> {
+pub(crate) fn external_ids() -> Result<std::collections::HashSet<String>> {
     let list = read_plist(&["list", "-plist", "external", "physical"])?;
     let ids = list
         .as_dictionary()
         .and_then(|d| d.get("AllDisks"))
         .and_then(Value::as_array)
         .ok_or("无法读取外置磁盘列表")?;
-    let mut volumes = Vec::new();
-    for id in ids
+    Ok(ids
         .iter()
         .filter_map(Value::as_string)
         .filter(|id| valid_id(id))
-    {
+        .map(str::to_owned)
+        .collect())
+}
+pub(crate) fn scan_physical() -> Result<Vec<Volume>> {
+    let mut volumes = Vec::new();
+    for id in external_ids()?.iter() {
         if let Ok(info) = read_plist(&["info", "-plist", id])
             && let Ok(volume) = parse_volume(&info)
         {

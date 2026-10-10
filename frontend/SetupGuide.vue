@@ -41,6 +41,7 @@ const steps=computed(()=>[tr(`安装应用`),props.backend==='Microvm'?tr('确�
 <h3> {{tr(`4 · 检查并开始使用`)}} </h3><div class="guide-status">{{environment?.service?tr(`✓ 后台助手已连接，日常挂载无需密码`):tr(`后台助手尚未连接`)}}<p v-if="!environment?.service">{{tr(environment?.service_issue||'')}}</p></div>
 <p> {{tr(`连接 NTFS 磁盘，回到「我的磁盘」确认显示「可读写」。助手连接成功不代表已经取得所有磁盘权限；以实际挂载结果为准。Windows 休眠或损坏的磁盘不会强行开启读写。`)}} </p>
 <button class="primary" :disabled="busy" @click="emit('refresh')"> {{tr(`重新检查`)}} </button>
+<details v-if="backend==='Microvm'"><summary>{{tr('桌面与访达入口')}}</summary><p>{{tr('在访达设置的「通用」中勾选「已连接的服务器」，即可显示桌面卷入口。在访达打开磁盘后，选择「文件 → 添加到边栏」，即可用硬盘名称快速访问。')}}</p><p>{{tr('拔盘前请使用 macntfs 的「安全推出」。异常断开后后台会尝试正常清理残留；无法保证未完成写入的数据完整，不会自动强行修复磁盘。')}}</p></details>
 </div>
 <div class="guide-footer"><button class="secondary" v-if="step>1" @click="step--"> {{tr(`上一步`)}} </button><button class="primary" v-if="step<4" @click="step++"> {{tr(`下一步`)}} </button></div>
 <p v-if="backend!=='Microvm'" class="guide-note"> {{tr(`官方说明：`)}} <button class="guide-link" @click="emit('action','guide-macfuse')"> {{tr(`macFUSE 安装指南`)}} </button> · <button class="guide-link" @click="emit('action','guide-apple')"> {{tr(`Apple 启动安全策略`)}} </button></p>
