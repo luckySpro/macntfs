@@ -85,10 +85,62 @@ pub fn verify_manifest(root: &Path, require_root: bool) -> Result<()> {
         "profile/alpine/rootfs/vmproxy",
         "profile/alpine/rootfs/usr/local/bin/entrypoint.sh",
         "etc/anylinuxfs.toml",
+        "GUEST-METADATA.json",
     ] {
         if !seen.contains(file) {
             return Err("微虚拟机组件清单不完整".into());
         }
+    }
+    Ok(())
+}
+/// Restore guest-only permissions after Installer has unpacked the payload.
+/// Host files remain root-owned and immutable; no macOS setuid bits are added.
+pub fn prepare_guest_metadata() -> Result<()> {
+    if unsafe { libc::geteuid() } != 0 {
+        return Err("配置虚拟机元数据需要安装器授权".into());
+    }
+    let runtime = root();
+    verify_manifest(&runtime, true)?;
+    let metadata: std::collections::BTreeMap<String, String> = serde_json::from_str(
+        &fs::read_to_string(runtime.join("GUEST-METADATA.json")).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    let guest = runtime.join("profile/alpine/rootfs");
+    // Validate the whole list before changing any attribute.
+    for (name, value) in &metadata {
+        validate_guest_metadata(name, value)?;
+        privileged::check_root_path(&guest.join(name))?;
+    }
+    for (name, value) in metadata {
+        let status = Command::new("/usr/bin/xattr")
+            .args(["-w", "user.containers.override_stat", &value])
+            .arg(guest.join(name))
+            .env_clear()
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err("虚拟机文件元数据配置失败，请重新安装完整 PKG".into());
+        }
+    }
+    Ok(())
+}
+fn validate_guest_metadata(name: &str, value: &str) -> Result<()> {
+    if name.is_empty()
+        || !Path::new(name)
+            .components()
+            .all(|c| matches!(c, Component::Normal(_)))
+    {
+        return Err("无效虚拟机元数据路径".into());
+    }
+    let parts: Vec<_> = value.split(':').collect();
+    if parts.len() != 3
+        || parts[0].parse::<u32>().is_err()
+        || parts[1].parse::<u32>().is_err()
+        || parts[2].is_empty()
+        || !parts[2].bytes().all(|b| (b'0'..=b'7').contains(&b))
+        || u32::from_str_radix(parts[2], 8).is_err()
+    {
+        return Err("无效虚拟机文件元数据".into());
     }
     Ok(())
 }
@@ -183,6 +235,8 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
     let options = format!("rw,norecover,windows_names,uid={uid},gid={gid}");
     // Keep the intended session even if startup times out, so safe eject can find it.
     sessions::record(volume, "microvm")?;
+    let log = root().join("operation.log");
+    let log_start = fs::metadata(&log).map(|m| m.len()).unwrap_or(0);
     // Explicit loopback binding; no LAN listener, no PF/default-route changes.
     command(
         &[
@@ -211,7 +265,10 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
             && m.writable
             && sessions::is_loopback_source(&m.source)
     }) {
-        return Err("尚未确认微虚拟机读写挂载，请运行诊断".into());
+        return Err(format!(
+            "尚未确认微虚拟机读写挂载，请运行诊断\n{}",
+            operation_detail(&log, log_start).unwrap_or_default()
+        ));
     }
     privileged::validate_volume(&volume.id, &volume.uuid)?;
     Ok("已开启读写：微虚拟机实验模式".into())
@@ -219,6 +276,17 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn guest_metadata_rejects_traversal_and_invalid_permissions() {
+        assert!(validate_guest_metadata("bin/mount", "0:0:0104755").is_ok());
+        assert!(validate_guest_metadata("etc/passwd", "100:100:0644").is_ok());
+        for name in ["", "../outside", "/bin/mount", "bin/../mount"] {
+            assert!(validate_guest_metadata(name, "0:0:0755").is_err());
+        }
+        for value in ["0:0", "0:0:888", "0:0:", "a:0:755", "0:0:755:0"] {
+            assert!(validate_guest_metadata("bin/mount", value).is_err());
+        }
+    }
     #[test]
     fn launchd_child_receives_only_trusted_non_root_identity() {
         let mut process = Command::new("/bin/sh");

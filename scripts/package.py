@@ -38,6 +38,17 @@ run('/usr/bin/codesign','--verify','--strict',runtime/'lib/libfuse.2.dylib')
 microvm = runtime/'MicroVM'
 if not (root/'vendor/microvm/bin/anylinuxfs').is_file(): raise SystemExit('Build the offline microVM payload with scripts/build-microvm.py first')
 run('/usr/bin/ditto','--extattr',root/'vendor/microvm',microvm)
+# Installer does not reliably retain every Linux override_stat attribute (notably
+# setuid mount). Store guest metadata as ordinary, integrity-checked payload data.
+guest_metadata={}
+guest=microvm/'profile/alpine/rootfs'
+for parent,dirs,names in os.walk(guest):
+    for name in dirs+names:
+        path=pathlib.Path(parent)/name
+        if path.is_symlink(): continue
+        result=subprocess.run(['/usr/bin/xattr','-p','user.containers.override_stat',str(path)],capture_output=True,text=True)
+        if result.returncode==0: guest_metadata[path.relative_to(guest).as_posix()]=result.stdout.strip()
+(microvm/'GUEST-METADATA.json').write_text(json.dumps(guest_metadata,sort_keys=True)+'\n')
 run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime','--entitlements',root/'scripts/microvm.entitlements',microvm/'bin/anylinuxfs')
 run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime',microvm/'libexec/gvproxy')
 # Linux files retain guest symlinks; hash links themselves rather than following them.

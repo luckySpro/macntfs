@@ -139,3 +139,7 @@ Apple Silicon / macOS 13+ 可手动选择 MicroVM 实验模式。Linux、ntfs-3g
 本机同盘实测：旧版单轮 1 GiB 写入约 69 MiB/s，新版三轮约 155–167 MiB/s，SHA-256 校验全部通过。128 MiB 短测没有改善；测试受缓存、文件分配位置和设备状态影响，不保证超大文件也能达到同样速度。详细方法、数字与限制见 [性能检查记录](PERFORMANCE.md)。暂不作为必需更新发布。
 
 开发回归：`python3 scripts/test-offline-runtime.py --large-io` 检查嵌套文件、图标和扩展属性；`python3 scripts/test-write-performance.py` 在独立 8 GiB 稀疏镜像上进行三轮写入对比，正常卸载后检查卷状态。两个命令均不挂载实体磁盘。
+
+### 0.3.18 MicroVM installation repair
+
+Installer may omit Linux guest permission attributes, including the executable mode of `/bin/mount`. The package now carries integrity-checked guest metadata; the root postinstall helper restores only guest override attributes without adding macOS setuid permissions. Failed NFS confirmation includes the current attempt log. Physical MicroVM/NFS validation remains pending installation.

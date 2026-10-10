@@ -186,3 +186,9 @@ Rust 覆盖活动挂载/操作期间拒绝模式切换、偏好设置仍可保�
 0.3.17 从系统控制台元数据取得非 root UID/GID，拒绝符号链接和 UID 0，清空继承环境并仅传入固定 PATH、LC_ALL 与上游工具需要的身份变量。真实 shell 子进程验证预先设置的 root 身份和 HOME 被清除、正确 UID/GID 保留；日志测试验证仅本次失败内容及 8 KiB 限制。24 项 Rust 测试、严格 Clippy 通过。没有使用 root 终端、sudo 凭据或跳过应用审计身份检查。
 
 本轮未在用户机器安装新助手或声称 NFS 实盘挂载已通过；该验证需要用户通过系统安装器完成新版安装。微虚拟机磁盘模式仍为实验性。
+
+### 0.3.18 regression scope
+
+Observed installed 0.3.17: guest `/bin/mount` had host mode 0600 and no override_stat attribute, while the source carried `0:0:0104755`; VM failed mounting configuration tmpfs before NFS startup. Added authenticated payload metadata restoration during postinstall, metadata path/value validation, unpacked-package attribute restoration checks and guest tmpfs mount execution in the disposable NTFS roundtrip. No physical disk was written. Actual host NFS mounting still requires the updated installation.
+
+Results: 25 Rust tests and strict clippy passed. Full PKG integrity/installer-mode validation passed. Disposable VM test used the expanded 0.3.18 PKG, restored its recorded metadata, executed guest tmpfs mount/unmount, NTFS nested write/read, sync/unmount and host safety re-probe successfully.

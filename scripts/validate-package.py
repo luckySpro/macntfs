@@ -49,6 +49,15 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     for name in ['bin/busybox','vmproxy','usr/sbin/rpc.nfsd']:
         override=command('/usr/bin/xattr','-p','user.containers.override_stat',guest/name).decode().strip()
         assert override.startswith('0:0:'),(name,override)
+    metadata=json.loads((vm/'GUEST-METADATA.json').read_text())
+    assert int(metadata['bin/mount'].split(':')[2],8)&0o111,'Guest mount must be executable'
+    for name,value in metadata.items():
+        path=guest/name
+        assert not path.is_symlink() and path.exists(),name
+        # Simulate postinstall on the unpacked fixture, never the installed runtime.
+        command('/usr/bin/xattr','-w','user.containers.override_stat',value,path)
+        assert command('/usr/bin/xattr','-p','user.containers.override_stat',path).decode().strip()==value,name
+    assert 'prepare-microvm' in (expanded/'OfflineRuntime.pkg/Scripts/postinstall').read_text()
     assert distribution.find('choices-outline')[0].get('choice')=='com.yuntu.ntfs-desktop.update-guard'
     assert (expanded/'UpdateGuard.pkg/Scripts/preinstall').is_file()
     service_plist=root/'dist/package-build/runtime-root/Library/LaunchDaemons/com.macntfs.helper.plist'
