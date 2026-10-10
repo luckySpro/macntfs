@@ -192,3 +192,7 @@ Rust 覆盖活动挂载/操作期间拒绝模式切换、偏好设置仍可保�
 Observed installed 0.3.17: guest `/bin/mount` had host mode 0600 and no override_stat attribute, while the source carried `0:0:0104755`; VM failed mounting configuration tmpfs before NFS startup. Added authenticated payload metadata restoration during postinstall, metadata path/value validation, unpacked-package attribute restoration checks and guest tmpfs mount execution in the disposable NTFS roundtrip. No physical disk was written. Actual host NFS mounting still requires the updated installation.
 
 Results: 25 Rust tests and strict clippy passed. Full PKG integrity/installer-mode validation passed. Disposable VM test used the expanded 0.3.18 PKG, restored its recorded metadata, executed guest tmpfs mount/unmount, NTFS nested write/read, sync/unmount and host safety re-probe successfully.
+
+### 0.3.19 host image access correction
+
+The installed 0.3.18 guest mount executable remained root-owned host mode 0600. Guest override attributes alone do not provide host file access. All regular guest image files are now host-readable (0644 plus existing execute bits), directories searchable (0755), with root ownership, no group/other writes and no host setuid/setgid. Guest permissions remain separately restored from the verified metadata. Package validation checks every unpacked image file for ordinary-user access. Physical host NFS validation is still pending installation.

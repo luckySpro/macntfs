@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Read-only package inspection; never installs or writes to a real disk."""
-import hashlib, json, pathlib, plistlib, subprocess, tempfile, xml.etree.ElementTree as ET
+import hashlib, json, os, pathlib, plistlib, subprocess, tempfile, xml.etree.ElementTree as ET
 root=pathlib.Path(__file__).resolve().parents[1]
 package=root/f"dist/macntfs-{(root/'VERSION').read_text().strip()}-arm64.pkg"
 app=root/'dist/macntfs.app'
@@ -50,6 +50,13 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
         override=command('/usr/bin/xattr','-p','user.containers.override_stat',guest/name).decode().strip()
         assert override.startswith('0:0:'),(name,override)
     metadata=json.loads((vm/'GUEST-METADATA.json').read_text())
+    for parent,dirs,names in os.walk(guest):
+        for name in dirs+names:
+            path=pathlib.Path(parent)/name
+            if path.is_symlink(): continue
+            mode=path.stat().st_mode
+            assert mode&0o004 and (not path.is_dir() or mode&0o001),path
+            assert not mode&0o6022,path
     assert int(metadata['bin/mount'].split(':')[2],8)&0o111,'Guest mount must be executable'
     for name,value in metadata.items():
         path=guest/name

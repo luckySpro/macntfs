@@ -143,3 +143,7 @@ Apple Silicon / macOS 13+ 可手动选择 MicroVM 实验模式。Linux、ntfs-3g
 ### 0.3.18 MicroVM installation repair
 
 Installer may omit Linux guest permission attributes, including the executable mode of `/bin/mount`. The package now carries integrity-checked guest metadata; the root postinstall helper restores only guest override attributes without adding macOS setuid permissions. Failed NFS confirmation includes the current attempt log. Physical MicroVM/NFS validation remains pending installation.
+
+### 0.3.19 host image access correction
+
+The installed 0.3.18 guest mount executable remained root-owned host mode 0600. Guest override attributes alone do not provide host file access. All regular guest image files are now host-readable (0644 plus existing execute bits), directories searchable (0755), with root ownership, no group/other writes and no host setuid/setgid. Guest permissions remain separately restored from the verified metadata. Package validation checks every unpacked image file for ordinary-user access. Physical host NFS validation is still pending installation.

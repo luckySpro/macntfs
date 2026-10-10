@@ -48,6 +48,10 @@ for parent,dirs,names in os.walk(guest):
         if path.is_symlink(): continue
         result=subprocess.run(['/usr/bin/xattr','-p','user.containers.override_stat',str(path)],capture_output=True,text=True)
         if result.returncode==0: guest_metadata[path.relative_to(guest).as_posix()]=result.stdout.strip()
+        # The VM also needs host-side access after privilege drop. Guest overrides
+        # do not grant host read access to root-owned 0600 files. Never set host
+        # setuid bits or give ordinary users write access to the image.
+        path.chmod(0o755 if path.is_dir() else (path.stat().st_mode & 0o111) | 0o644)
 (microvm/'GUEST-METADATA.json').write_text(json.dumps(guest_metadata,sort_keys=True)+'\n')
 run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime','--entitlements',root/'scripts/microvm.entitlements',microvm/'bin/anylinuxfs')
 run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime',microvm/'libexec/gvproxy')
