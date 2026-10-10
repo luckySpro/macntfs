@@ -200,6 +200,11 @@ pub fn shell_quote(s: &str) -> String {
 pub fn mount(v: &Volume, backend: crate::settings::Backend) -> Result<String> {
     let v = fresh(v)?;
     if v.writable && !v.mount.is_empty() {
+        crate::sessions::validate_mounted_backend(
+            &v,
+            backend.resolved(&run("/usr/bin/sw_vers", &["-productVersion"])?)?,
+            &crate::sessions::load()?,
+        )?;
         return Ok("磁盘已经可以读写".into());
     }
     let env = environment();
@@ -280,9 +285,14 @@ pub fn install() -> Result<String> {
     let env = environment();
     let package = if !env.runtime {
         resources.join("Installers/OfflineRuntime.pkg")
-    } else if !env.fuse {
+    } else if !env.fuse
+        && crate::settings::Settings::load().backend != crate::settings::Backend::Microvm
+    {
         resources.join("Installers/Install macFUSE.pkg")
     } else {
+        if crate::settings::Settings::load().backend == crate::settings::Backend::Microvm {
+            return Ok("免内核模式组件已安装，无需安装 macFUSE。请确认助手磁盘访问权限。".into());
+        }
         return Ok("离线运行组件已经安装。若系统仍要求驱动授权，请前往系统设置。".into());
     };
     if !package.is_file() {

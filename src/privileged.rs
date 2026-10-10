@@ -150,6 +150,7 @@ pub fn execute(args: Vec<String>) -> Result<String> {
 
     let volume = validate_volume(&args[1], &args[2])?;
     if volume.writable && !volume.mount.is_empty() {
+        crate::sessions::validate_mounted_backend(&volume, &args[3], &crate::sessions::load()?)?;
         return Ok("磁盘已经可以读写".into());
     }
     let os = system::environment().os;

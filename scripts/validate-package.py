@@ -15,6 +15,11 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     expected={'#Core.pkg','#PreferencePane.pkg','#OfflineRuntime.pkg','#Application.pkg','#UpdateGuard.pkg'}
     assert refs==expected,refs
     assert distribution.find('options').get('hostArchitectures')=='arm64'
+    assert distribution.find('options').get('customize')=='always'
+    stable=distribution.find("choice[@id='com.macntfs.optional-macfuse']")
+    assert stable is not None and stable.get('visible')=='true'
+    assert {r.get('id') for r in stable.findall('pkg-ref')}=={'io.macfuse.installer.components.core','io.macfuse.installer.components.preferencepane'}
+    assert stable.get('start_selected')=='defaultStableComponents()'
     for component in ['Core.pkg','PreferencePane.pkg']:
         vendor=root/'vendor/macfuse-expanded'/component
         for name in ['Payload','Bom','PackageInfo']:
@@ -89,6 +94,11 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     for choice in flatten(choices):
         for active in choice.get('pathsOfActivePackagesInChoice',[]):
             assert active.startswith('file://'),active
+    changes=directory/'kernel-free-choices.plist'
+    changes.write_bytes(plistlib.dumps([{'choiceIdentifier':'com.macntfs.optional-macfuse','choiceAttribute':'selected','attributeSetting':0}]))
+    selected=plistlib.loads(command('/usr/sbin/installer','-showChoicesAfterApplyingChangesXML',changes,'-pkg',package,'-target','/'))
+    stable_plan=next(c for c in selected if c.get('choiceIdentifier')=='com.macntfs.optional-macfuse' and c.get('choiceAttribute')=='selected')
+    assert stable_plan['attributeSetting']==0,stable_plan
     report={
         'package':package.name,'sha256':sha(package),'size_bytes':package.stat().st_size,
         'embedded_components':sorted(refs),'payload_hashes_verified':names,

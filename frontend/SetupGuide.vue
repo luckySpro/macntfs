@@ -1,22 +1,22 @@
 <script setup>
 import {tr,locale,setLanguage} from "./i18n";
 import {ref,watch,computed} from 'vue';
-defineProps({environment:Object,busy:Boolean,backend:String});
+const props=defineProps({environment:Object,busy:Boolean,backend:String});
 const emit=defineEmits(['action','refresh']);
 const saved=Number(localStorage.getItem('macntfs-setup-step'));
 const step=ref(saved>=1&&saved<=4?saved:1);
 watch(step,value=>localStorage.setItem('macntfs-setup-step',String(value)));
-const steps=computed(()=>[tr(`安装应用`),tr(`允许驱动`),tr(`磁盘访问`),tr(`完成检查`)]);
+const steps=computed(()=>[tr(`安装应用`),props.backend==='Microvm'?tr('确认读写模式'):tr(`允许驱动`),tr(`磁盘访问`),tr(`完成检查`)]);
 </script>
 <template>
 <section class="setting-card guide">
 <h2> {{tr(`首次使用向导`)}} <span class="version"> {{tr(`按顺序完成，只需设置一次`)}} </span></h2>
-<p> {{tr(`安装授权、驱动授权、磁盘访问是三个不同步骤。你只需按当前页面操作；软件不会替你更改启动安全策略。`)}} </p>
+<p>{{backend==='Microvm'?tr('免内核模式无需安装或授权 macFUSE，也无需恢复模式。完成安装和助手磁盘访问授权后，手动开启读写。'):tr(`安装授权、驱动授权、磁盘访问是三个不同步骤。你只需按当前页面操作；软件不会替你更改启动安全策略。`)}}</p>
 <div class="guide-tabs"><button v-for="(title,index) in steps" :key="title" :class="{selected:step===index+1}" @click="step=index+1">{{index+1}} · {{title}}</button></div>
 <div v-if="step===1">
 <h3> {{tr(`1 · 安装到「应用程序」`)}} </h3><p> {{tr(`打开下载的完整 PKG，按「继续 → 安装」完成系统授权。安装时输入 Mac 登录密码；如果系统显示 Touch ID，也可使用指纹。安装完成后，从 Finder 的「应用程序」打开 macntfs。`)}} </p>
-<p> {{tr(`更新时也使用完整安装包，同时更新应用和助手。安装前从菜单栏选择「退出 macntfs」，避免旧版本继续运行。`)}} </p>
-<div class="guide-status">{{environment?.runtime?tr(`读写组件版本检查通过`):tr(`读写组件尚未安装或版本不一致`)}} · {{environment?.fuse?tr(`macFUSE 已安装`):tr(`macFUSE 尚未安装`)}}</div>
+<p> {{tr(`更新时先安全推出所有磁盘，再从菜单栏退出 macntfs，最后安装完整 PKG。更新助手后可能需要重新添加磁盘访问权限。`)}} </p>
+<div class="guide-status">{{environment?.runtime?tr(`读写组件版本检查通过`):tr(`读写组件尚未安装或版本不一致`)}} · {{backend==='Microvm'?tr('免内核模式不需要 macFUSE'):environment?.fuse?tr(`macFUSE 已安装`):tr(`macFUSE 尚未安装`)}}</div>
 <button class="secondary" :disabled="busy" @click="emit('action','install')"> {{tr(`打开本地组件安装器`)}} </button>
 </div>
 <div v-else-if="step===2">
@@ -43,6 +43,6 @@ const steps=computed(()=>[tr(`安装应用`),tr(`允许驱动`),tr(`磁盘访问
 <button class="primary" :disabled="busy" @click="emit('refresh')"> {{tr(`重新检查`)}} </button>
 </div>
 <div class="guide-footer"><button class="secondary" v-if="step>1" @click="step--"> {{tr(`上一步`)}} </button><button class="primary" v-if="step<4" @click="step++"> {{tr(`下一步`)}} </button></div>
-<p class="guide-note"> {{tr(`官方说明：`)}} <button class="guide-link" @click="emit('action','guide-macfuse')"> {{tr(`macFUSE 安装指南`)}} </button> · <button class="guide-link" @click="emit('action','guide-apple')"> {{tr(`Apple 启动安全策略`)}} </button></p>
+<p v-if="backend!=='Microvm'" class="guide-note"> {{tr(`官方说明：`)}} <button class="guide-link" @click="emit('action','guide-macfuse')"> {{tr(`macFUSE 安装指南`)}} </button> · <button class="guide-link" @click="emit('action','guide-apple')"> {{tr(`Apple 启动安全策略`)}} </button></p>
 </section>
 </template>

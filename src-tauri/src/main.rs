@@ -150,7 +150,26 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
     if !["auto", "zh-Hans", "zh-Hant", "en", "ja"].contains(&settings.language.as_str()) {
         return Err("Unsupported language".into());
     }
+    let monitor = app.state::<Mutex<Monitor>>();
+    let monitor = monitor.lock().map_err(|e| e.to_string())?;
+    let previous = Settings::load();
+    if previous.backend != settings.backend {
+        macntfs_core::settings::validate_backend_change(
+            previous.backend,
+            settings.backend,
+            &system::run("/usr/bin/sw_vers", &["-productVersion"])?,
+            monitor.busy,
+            !macntfs_core::sessions::managed_mounts(&macntfs_core::sessions::mount_table()?)
+                .is_empty(),
+        )?;
+        // Includes a VM still starting/tearing down after a timeout, even when
+        // no volume is in the mount table. The helper serializes this check.
+        macntfs_core::daemon::request("update-check", "", "", "").map_err(
+            |_| "读写服务仍在运行或助手未连接，请安全推出磁盘并确认助手连接后再切换模式",
+        )?;
+    }
     settings.save()?;
+    drop(monitor);
     let handle = app.clone();
     let theme = settings.theme;
     app.run_on_main_thread(move || {

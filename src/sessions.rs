@@ -67,6 +67,22 @@ pub fn target(id: &str, backend: &str) -> String {
         }
     )
 }
+pub fn validate_mounted_backend(
+    volume: &Volume,
+    requested: &str,
+    sessions: &[Session],
+) -> Result<()> {
+    let recorded = sessions
+        .iter()
+        .find(|s| s.id == volume.id && s.uuid == volume.uuid && s.target == volume.mount);
+    let actual = recorded
+        .map(|s| s.backend.as_str())
+        .or_else(|| (volume.mount == target(&volume.id, "kernel")).then_some("kernel"));
+    if actual.is_some_and(|backend| backend != requested) {
+        return Err("请先安全推出磁盘，再切换读写模式".into());
+    }
+    Ok(())
+}
 pub fn record(volume: &Volume, backend: &str) -> Result<()> {
     let mut sessions = load()?;
     sessions.retain(|s| s.id != volume.id);
@@ -172,5 +188,31 @@ mod tests {
         );
         assert_eq!(managed_mounts(&mounts).len(), 2);
         assert!(!mounts[1].writable);
+    }
+    #[test]
+    fn refuses_cross_backend_reuse_including_legacy_mounts() {
+        let mut volume = Volume {
+            id: "disk4s3".into(),
+            uuid: "same".into(),
+            parent: "disk4".into(),
+            name: "Test".into(),
+            mount: target("disk4s3", "kernel"),
+            size: 0,
+            free: 0,
+            writable: true,
+        };
+        assert!(validate_mounted_backend(&volume, "kernel", &[]).is_ok());
+        assert!(validate_mounted_backend(&volume, "microvm", &[]).is_err());
+        volume.mount = target(&volume.id, "microvm");
+        let record = Session {
+            id: volume.id.clone(),
+            uuid: volume.uuid.clone(),
+            backend: "microvm".into(),
+            target: volume.mount.clone(),
+        };
+        assert!(
+            validate_mounted_backend(&volume, "microvm", std::slice::from_ref(&record)).is_ok()
+        );
+        assert!(validate_mounted_backend(&volume, "kernel", &[record]).is_err());
     }
 }
