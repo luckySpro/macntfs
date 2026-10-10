@@ -1283,5 +1283,10 @@
     "en" : "Kernel-free components are installed. macFUSE is not required. Verify helper disk access approval.",
     "zh-Hant" : "免核心模式組件已安裝，無需安裝 macFUSE。請確認助手磁碟存取權限。",
     "ja" : "カーネル拡張不要モードのコンポーネントはインストール済みです。macFUSE は不要です。ヘルパーのディスクアクセス承認を確認してください。"
+  },
+  "微虚拟机操作失败。未强行恢复或卸载磁盘。" : {
+    "en" : "MicroVM operation failed. No forced recovery or unmount was performed.",
+    "ja" : "マイクロVM の操作に失敗しました。強制的な復旧や取り外しは行っていません。",
+    "zh-Hant" : "微虛擬機操作失敗。未強制修復或卸載磁碟。"
   }
 }

@@ -6,6 +6,7 @@ use crate::{
 use sha2::{Digest, Sha256};
 use std::{
     fs,
+    io::{Read, Seek, SeekFrom},
     os::unix::fs::{MetadataExt, PermissionsExt},
     path::{Component, Path, PathBuf},
     process::{Command, Stdio},
@@ -102,11 +103,17 @@ pub fn command(args: &[&str], seconds: u64) -> Result<String> {
         .append(true)
         .open(&log)
         .map_err(|e| e.to_string())?;
-    let mut child = Command::new(root().join("bin/anylinuxfs"))
+    let log_start = file.metadata().map_err(|e| e.to_string())?.len();
+    // launchd has no sudo ancestry. Resolve the desktop identity from the OS,
+    // never from client arguments or inherited environment variables.
+    let console = fs::symlink_metadata("/dev/console").map_err(|e| e.to_string())?;
+    if console.file_type().is_symlink() {
+        return Err("未找到有效的桌面登录用户".into());
+    }
+    let mut process = Command::new(root().join("bin/anylinuxfs"));
+    configure_invoker(&mut process, console.uid(), console.gid())?;
+    let mut child = process
         .args(args)
-        .env_clear()
-        .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
-        .env("LC_ALL", "C")
         .stdin(Stdio::null())
         .stdout(Stdio::from(file.try_clone().map_err(|e| e.to_string())?))
         .stderr(Stdio::from(file))
@@ -118,9 +125,10 @@ pub fn command(args: &[&str], seconds: u64) -> Result<String> {
             if status.success() {
                 return Ok("微虚拟机操作完成".into());
             }
-            return Err(
-                "微虚拟机操作失败。请检查磁盘访问权限并运行诊断；未强行恢复或卸载磁盘。".into(),
-            );
+            return Err(format!(
+                "微虚拟机操作失败。未强行恢复或卸载磁盘。\n退出状态：{status}\n{}",
+                operation_detail(&log, log_start).unwrap_or_default()
+            ));
         }
         if started.elapsed() > Duration::from_secs(seconds) {
             return Err(
@@ -129,6 +137,27 @@ pub fn command(args: &[&str], seconds: u64) -> Result<String> {
         }
         std::thread::sleep(Duration::from_millis(100));
     }
+}
+fn operation_detail(path: &Path, start: u64) -> std::io::Result<String> {
+    let mut file = fs::File::open(path)?;
+    let end = file.metadata()?.len();
+    file.seek(SeekFrom::Start(start.max(end.saturating_sub(8192))))?;
+    let mut bytes = Vec::new();
+    file.take(8192).read_to_end(&mut bytes)?;
+    Ok(String::from_utf8_lossy(&bytes).trim().into())
+}
+fn configure_invoker(process: &mut Command, uid: u32, gid: u32) -> Result<()> {
+    if uid == 0 {
+        return Err("未找到有效的桌面登录用户".into());
+    }
+    process
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+        .env("LC_ALL", "C")
+        // anylinuxfs consumes these as identity metadata, not authentication.
+        .env("SUDO_UID", uid.to_string())
+        .env("SUDO_GID", gid.to_string());
+    Ok(())
 }
 pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
     verify_manifest(&root(), true)?;
@@ -190,6 +219,31 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn launchd_child_receives_only_trusted_non_root_identity() {
+        let mut process = Command::new("/bin/sh");
+        process.env("SUDO_UID", "0").env("HOME", "/untrusted");
+        configure_invoker(&mut process, 501, 20).unwrap();
+        let output = process
+            .args([
+                "-c",
+                "printf '%s:%s:%s' \"$SUDO_UID\" \"$SUDO_GID\" \"${HOME-unset}\"",
+            ])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"501:20:unset");
+        assert!(configure_invoker(&mut Command::new("/bin/sh"), 0, 0).is_err());
+    }
+    #[test]
+    fn operation_errors_exclude_old_attempts_and_are_bounded() {
+        let path = std::env::temp_dir().join(format!("macntfs-vm-log-{}", std::process::id()));
+        fs::write(&path, b"old permission error\nnew startup failure\n").unwrap();
+        assert_eq!(operation_detail(&path, 21).unwrap(), "new startup failure");
+        fs::write(&path, vec![b'a'; 20000]).unwrap();
+        assert_eq!(operation_detail(&path, 0).unwrap().len(), 8192);
+        fs::remove_file(path).unwrap();
+    }
     #[test]
     fn rejects_unsafe_manifest_paths_and_missing_contract() {
         let root = std::env::temp_dir().join(format!("macntfs-vm-manifest-{}", std::process::id()));

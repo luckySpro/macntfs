@@ -179,3 +179,10 @@ Rust 覆盖活动挂载/操作期间拒绝模式切换、偏好设置仍可保�
 安装包使用一个可选 macFUSE 选择绑定原始 Core 和 PreferencePane，两者的签名载荷未改动。Installer 实际只读计划验证取消该项后 selected 为 0；实际 JavaScript 函数在模拟 macOS 12/13/27、无驱动/已有同版/已有更高版条件下验证默认选择及禁用逻辑。包签名、哈希、root 权限及本地依赖完整性检查通过。
 
 限制：本轮没有升级用户本机应用、卸载已有 macFUSE、改变启动安全策略、切换用户硬盘模式或测试实体 NFS 挂载。没有全新无 macFUSE 系统的完整安装验证，也没有证明免内核模式达到 0.3.15 内核模式的实盘速度。因此仍保留实验性标记，不发布为必需更新。
+# 0.3.17 launchd 身份传递修复
+
+实际安装的 0.3.16 操作日志两次出现 `Could not determine invoking user: This program must not be run directly by root; use sudo instead`，没有创建虚拟机日志，也无运行中的 anylinuxfs/gvproxy 或 NFS 挂载。这确认失败发生在虚拟机启动之前，而不是磁盘访问或 NFS 阶段。
+
+0.3.17 从系统控制台元数据取得非 root UID/GID，拒绝符号链接和 UID 0，清空继承环境并仅传入固定 PATH、LC_ALL 与上游工具需要的身份变量。真实 shell 子进程验证预先设置的 root 身份和 HOME 被清除、正确 UID/GID 保留；日志测试验证仅本次失败内容及 8 KiB 限制。24 项 Rust 测试、严格 Clippy 通过。没有使用 root 终端、sudo 凭据或跳过应用审计身份检查。
+
+本轮未在用户机器安装新助手或声称 NFS 实盘挂载已通过；该验证需要用户通过系统安装器完成新版安装。微虚拟机磁盘模式仍为实验性。
