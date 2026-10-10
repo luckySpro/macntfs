@@ -1,6 +1,6 @@
 [package]
 name = "macntfs"
-version = "0.3.19"
+version = "0.3.20"
 edition = "2024"
 authors = ["Lucky <473276@qq.com>"]
 [build-dependencies]

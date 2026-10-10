@@ -147,3 +147,7 @@ Installer may omit Linux guest permission attributes, including the executable m
 ### 0.3.19 host image access correction
 
 The installed 0.3.18 guest mount executable remained root-owned host mode 0600. Guest override attributes alone do not provide host file access. All regular guest image files are now host-readable (0644 plus existing execute bits), directories searchable (0755), with root ownership, no group/other writes and no host setuid/setgid. Guest permissions remain separately restored from the verified metadata. Package validation checks every unpacked image file for ordinary-user access. Physical host NFS validation is still pending installation.
+
+### 0.3.20 immutable guest startup directories
+
+Installed 0.3.19 advances past mount execution but vmproxy cannot create `/etc/lvm/archive` in the root-owned host image. Packaging now precreates all eight vmproxy temporary filesystem mount points with guest root metadata. The disposable package-derived VM test makes host image directories non-writable before startup, preventing caller-owned test fixtures from masking this issue. Physical host NFS mounting remains unverified until installation.

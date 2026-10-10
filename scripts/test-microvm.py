@@ -15,6 +15,12 @@ with tempfile.TemporaryDirectory(prefix='macntfs-vm-qa-') as temporary:
     subprocess.run(['/usr/bin/ditto','--extattr',str(payload),str(directory/'runtime')],check=True)
     for name,value in json.loads((payload/'GUEST-METADATA.json').read_text()).items():
         subprocess.run(['/usr/bin/xattr','-w','user.containers.override_stat',value,str(directory/'runtime/profile/alpine/rootfs'/name)],check=True)
+    # Reproduce installed immutability even though this fixture belongs to us.
+    guest=directory/'runtime/profile/alpine/rootfs'
+    for parent,dirs,names in os.walk(guest):
+        for name in dirs+names:
+            path=pathlib.Path(parent)/name
+            if not path.is_symlink(): path.chmod(0o555 if path.is_dir() else (path.stat().st_mode & 0o111)|0o444)
     binary=directory/'runtime/bin/anylinuxfs'
     binary.unlink();shutil.copy2(preview_binary,binary)
     subprocess.run(['/usr/bin/codesign','--force','--sign','-','--entitlements',str(root/'scripts/microvm.entitlements'),str(binary)],check=True)
@@ -23,8 +29,14 @@ with tempfile.TemporaryDirectory(prefix='macntfs-vm-qa-') as temporary:
     mkntfs='/opt/homebrew/opt/ntfs-3g-mac/sbin/mkntfs'
     subprocess.run([mkntfs,'--fast','--force','-L','MACNTFS-VM-QA',str(image)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
     # The host fixture is the only block device assigned to the VM, /dev/vda.
-    command='set -eu; uname -m; mkdir -p /tmp/macntfs-config /tmp/macntfs-qa; mount -t tmpfs tmpfs /tmp/macntfs-config; umount /tmp/macntfs-config; ntfs-3g /dev/vda /tmp/macntfs-qa -o rw,norecover; mkdir /tmp/macntfs-qa/nested; echo macntfs-offline-vm > /tmp/macntfs-qa/nested/roundtrip.txt; test "$(cat /tmp/macntfs-qa/nested/roundtrip.txt)" = macntfs-offline-vm; sync; umount /tmp/macntfs-qa; echo MACNTFS_VM_ROUNDTRIP_PASSED'
-    result=subprocess.run([str(binary),'shell',str(image),'--command',command],text=True,capture_output=True,timeout=60)
+    command='set -eu; uname -m; mkdir -p /tmp/macntfs-config /tmp/macntfs-qa; mount -t tmpfs tmpfs /tmp/macntfs-config; umount /tmp/macntfs-config; ntfs-3g /dev/vda /tmp/macntfs-qa -o rw,norecover; mkdir /tmp/macntfs-qa/nested; echo macntfs-offline-vm > /tmp/macntfs-qa/nested/roundtrip.txt; test "$(cat /tmp/macntfs-qa/nested/roundtrip.txt)" = macntfs-offline-vm; sync; umount /tmp/macntfs-qa; mount -t nfsd nfsd /proc/fs/nfsd; rpcbind -w; rpc.nfsd 2; rpc.nfsd 0; umount /proc/fs/nfsd; echo MACNTFS_VM_ROUNDTRIP_PASSED'
+    try:
+        result=subprocess.run([str(binary),'shell',str(image),'--no-tsi','--net-helper','gvproxy','--command',command],text=True,capture_output=True,timeout=60)
+    finally:
+        for parent,dirs,names in os.walk(guest):
+            for name in dirs:
+                path=pathlib.Path(parent)/name
+                if not path.is_symlink(): path.chmod(0o755)
     pathlib.Path('/tmp/macntfs-vm-roundtrip.log').write_text(result.stdout+result.stderr)
     if result.returncode or 'MACNTFS_VM_ROUNDTRIP_PASSED' not in result.stdout:raise SystemExit('Offline guest roundtrip failed; see /tmp/macntfs-vm-roundtrip.log')
     subprocess.run([str(root/'vendor/runtime/bin/ntfs-3g.probe'),'--readwrite',str(image)],check=True)

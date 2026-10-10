@@ -50,6 +50,8 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
         override=command('/usr/bin/xattr','-p','user.containers.override_stat',guest/name).decode().strip()
         assert override.startswith('0:0:'),(name,override)
     metadata=json.loads((vm/'GUEST-METADATA.json').read_text())
+    for name in ['.config','.cache','mnt','tmp','run','var/lib/nfs','etc/lvm/archive','etc/lvm/backup']:
+        assert (guest/name).is_dir(),name
     for parent,dirs,names in os.walk(guest):
         for name in dirs+names:
             path=pathlib.Path(parent)/name

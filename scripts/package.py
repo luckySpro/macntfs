@@ -42,6 +42,12 @@ run('/usr/bin/ditto','--extattr',root/'vendor/microvm',microvm)
 # setuid mount). Store guest metadata as ordinary, integrity-checked payload data.
 guest_metadata={}
 guest=microvm/'profile/alpine/rootfs'
+# vmproxy mounts temporary writable filesystems here. Their mount points must
+# exist before privilege drop; it cannot mkdir inside the immutable host image.
+for name in ['.config','.cache','mnt','tmp','run','var/lib/nfs','etc/lvm/archive','etc/lvm/backup']:
+    path=guest/name
+    path.mkdir(parents=True,exist_ok=True)
+    run('/usr/bin/xattr','-w','user.containers.override_stat','0:0:0755',path)
 for parent,dirs,names in os.walk(guest):
     for name in dirs+names:
         path=pathlib.Path(parent)/name
