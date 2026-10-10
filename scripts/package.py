@@ -11,6 +11,14 @@ build.mkdir(parents=True)
 
 def run(*args): subprocess.run([str(x) for x in args], check=True)
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def readable_app_resources(app):
+    # Source crates may carry 0640 notices. Installed bundles must be readable to
+    # normal users after pkgbuild changes ownership to root; keep execute bits.
+    for parent, dirs, files in os.walk(app):
+        for name in dirs+files:
+            path=pathlib.Path(parent)/name
+            if not path.is_symlink(): path.chmod((path.stat().st_mode & ~0o022) | (0o555 if path.is_dir() else 0o444))
+
 manifest = json.loads((root/'vendor/manifest.json').read_text())
 for name, entry in [('macfuse-5.4.0.dmg',manifest['macfuse']),('ntfs-3g-2026.9.28.tar.gz',manifest['ntfs3g'])]:
     if digest(root/'vendor/downloads'/name) != entry['sha256']: raise SystemExit('Upstream asset checksum mismatch')
@@ -95,6 +103,7 @@ info = {
 }
 with (app/'Contents/Info.plist').open('wb') as f: plistlib.dump(info,f)
 options = ['--options','runtime'] + (['--timestamp'] if identity != '-' else [])
+readable_app_resources(app)
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
 run('/usr/bin/codesign','--verify','--deep','--strict',app)
 app_root = build/'app-root/Applications'; app_root.mkdir(parents=True)
@@ -104,6 +113,7 @@ with tarfile.open(resources/f'Sources/macntfs-{version}-source.tar.gz','w:gz') a
     for path in ['frontend','src-tauri','package.json','package-lock.json','vite.config.js','VERSION','src','scripts','THIRD_PARTY_MICROVM.md','Cargo.toml','Cargo.lock','README.md','VALIDATION.md','LICENSE','vendor/manifest.json','vendor/licenses']:
         archive.add(root/path,arcname=f'macntfs/{path}')
 # Re-sign after adding the source archive and recreate the staged copy.
+readable_app_resources(app)
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
 shutil.rmtree(app_root/app.name); run('/usr/bin/ditto','--extattr',app,app_root/app.name)
 # Bundle relocation is disabled: the privileged helper trusts a fixed root path.

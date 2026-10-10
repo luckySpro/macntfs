@@ -77,6 +77,10 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
     for suffix in ['/macntfs.app','/macntfs.app/Contents','/macntfs.app/Contents/MacOS','/macntfs.app/Contents/MacOS/macntfs']:
         item=next(line for line in app_bom if line.split('\t')[0].endswith(suffix))
         _,mode,uid=item.split('\t'); assert uid=='0' and int(mode,8) & 0o022 == 0,item
+    for line in app_bom:
+        path,mode,uid=line.split('\t'); bits=int(mode,8)
+        if '/macntfs.app/' in path and bits & 0o170000 == 0o100000:
+            assert bits & 0o004,('Installed resource is unreadable to normal users',path,mode)
     choices=plistlib.loads(command('/usr/sbin/installer','-showChoicesXML','-pkg',package,'-target','/'))
     def flatten(items):
         for item in items:

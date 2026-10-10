@@ -1213,5 +1213,10 @@
     "en" : "Components are updating. Reconnect the disk after the update.",
     "ja" : "コンポーネントを更新中です。更新後にディスクを接続し直してください。",
     "zh-Hant" : "元件正在更新，請稍後重新連接磁碟"
+  },
+  "已观察到内核模式的实际读写挂载，驱动授权已确认" : {
+    "en" : "A writable kernel-mode mount was observed; driver authorization is confirmed.",
+    "ja" : "カーネルモードで読み書き可能なマウントを確認しました。ドライバの許可は確認済みです。",
+    "zh-Hant" : "已觀察到核心模式的實際讀寫掛載，驅動授權已確認"
   }
 }

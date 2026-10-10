@@ -48,6 +48,7 @@ pub fn assess(
     volumes: &[Volume],
     scan_ok: bool,
     verified_mounts: bool,
+    verified_driver: bool,
 ) -> Vec<Check> {
     let mut rows = vec![
         check(
@@ -92,14 +93,22 @@ pub fn assess(
     } else {
         rows.push(check(
             "driver",
-            if env.fuse { "unknown" } else { "error" },
+            if verified_driver {
+                "pass"
+            } else if env.fuse {
+                "unknown"
+            } else {
+                "error"
+            },
             "驱动授权",
-            if env.fuse {
+            if verified_driver {
+                "已观察到内核模式的实际读写挂载，驱动授权已确认"
+            } else if env.fuse {
                 "驱动已安装；macOS 授权状态需通过实际挂载确认"
             } else {
                 "请安装内置 macFUSE，并按首次使用向导完成授权"
             },
-            "settings",
+            if verified_driver { "" } else { "settings" },
         ));
     }
     rows.push(check(
@@ -141,6 +150,17 @@ pub fn assess(
     ));
     rows
 }
+fn driver_mount_confirmed(volumes: &[Volume], table: &[crate::sessions::MountEntry]) -> bool {
+    volumes.iter().any(|v| {
+        v.writable
+            && crate::sessions::managed_mounts(table).iter().any(|m| {
+                m.kind == "macfuse"
+                    && m.writable
+                    && m.target == v.mount
+                    && m.source == format!("/dev/{}", v.id)
+            })
+    })
+}
 pub fn collect() -> Report {
     let env = system::environment();
     let settings = Settings::load();
@@ -159,7 +179,15 @@ pub fn collect() -> Report {
         version: env!("CARGO_PKG_VERSION"),
         os: env.os.clone(),
         backend: format!("{:?}", settings.backend),
-        checks: assess(&env, &settings, &volumes, scan_ok, verified),
+        checks: assess(
+            &env,
+            &settings,
+            &volumes,
+            scan_ok,
+            verified,
+            matches!(settings.backend, Backend::Auto | Backend::Kernel)
+                && driver_mount_confirmed(&volumes, &table),
+        ),
         volumes: volumes
             .iter()
             .enumerate()
@@ -191,6 +219,50 @@ pub fn export() -> Result<String> {
 mod tests {
     use super::*;
     #[test]
+    fn confirms_only_matching_writable_kernel_mounts() {
+        let volume = Volume {
+            id: "disk7s3".into(),
+            uuid: "test".into(),
+            name: String::new(),
+            parent: "disk7".into(),
+            mount: "/Volumes/NTFS-disk7s3".into(),
+            size: 0,
+            free: 0,
+            writable: true,
+        };
+        for (line, expected) in [
+            (
+                "/dev/disk7s3 on /Volumes/NTFS-disk7s3 (macfuse, local)",
+                true,
+            ),
+            (
+                "/dev/disk8s3 on /Volumes/NTFS-disk7s3 (macfuse, local)",
+                false,
+            ),
+            ("127.0.0.1:/share on /Volumes/NTFS-disk7s3 (nfs)", false),
+            (
+                "/dev/disk7s3 on /Volumes/NTFS-disk7s3 (macfuse, local, read-only)",
+                false,
+            ),
+        ] {
+            assert_eq!(
+                driver_mount_confirmed(
+                    std::slice::from_ref(&volume),
+                    &crate::sessions::parse_mounts(line)
+                ),
+                expected
+            );
+        }
+        let env = Environment {
+            fuse: true,
+            ..Environment::default()
+        };
+        let rows = assess(&env, &Settings::default(), &[], true, true, true);
+        let driver = rows.iter().find(|c| c.code == "driver").unwrap();
+        assert_eq!(driver.status, "pass");
+        assert!(driver.action.is_empty());
+    }
+    #[test]
     fn connected_helper_does_not_imply_disk_access_or_driver_authorization() {
         let env = Environment {
             runtime: true,
@@ -198,7 +270,7 @@ mod tests {
             fuse: true,
             ..Environment::default()
         };
-        let rows = assess(&env, &Settings::default(), &[], true, false);
+        let rows = assess(&env, &Settings::default(), &[], true, false, false);
         assert_eq!(
             rows.iter().find(|c| c.code == "permission").unwrap().status,
             "unknown"
