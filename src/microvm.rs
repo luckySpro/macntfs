@@ -229,11 +229,6 @@ fn configure_invoker(process: &mut Command, uid: u32, gid: u32) -> Result<()> {
 }
 pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
     verify_manifest(&root(), true)?;
-    let target = sessions::target(&volume.id, "microvm");
-    if Path::new(&target).exists() {
-        privileged::check_root_path(Path::new(&target))?;
-        fs::remove_dir(&target).map_err(|_| "挂载目录被占用，请先安全推出")?;
-    }
     if !volume.mount.is_empty() {
         system::run("/usr/sbin/diskutil", &["unmount", &volume.id])?;
     }
@@ -245,12 +240,13 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
         return Err(e);
     }
     privileged::validate_volume(&volume.id, &volume.uuid)?;
+    let target = named_target(&volume.name, &volume.id)?;
     fs::create_dir(&target).map_err(|e| e.to_string())?;
     fs::set_permissions(&target, fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
     let device = format!("/dev/{}", volume.id);
     let options = format!("rw,norecover,windows_names,uid={uid},gid={gid}");
     // Keep the intended session even if startup times out, so safe eject can find it.
-    sessions::record(volume, "microvm")?;
+    sessions::record_at(volume, "microvm", &target)?;
     let log = root().join("operation.log");
     let log_start = fs::metadata(&log).map(|m| m.len()).unwrap_or(0);
     // Explicit loopback binding; no LAN listener, no PF/default-route changes.
@@ -289,9 +285,72 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
     privileged::validate_volume(&volume.id, &volume.uuid)?;
     Ok("已开启读写：微虚拟机实验模式".into())
 }
+fn named_target(name: &str, id: &str) -> Result<String> {
+    choose_named_target(Path::new("/Volumes"), name, id)
+}
+fn choose_named_target(directory: &Path, name: &str, id: &str) -> Result<String> {
+    let label: String = name
+        .trim()
+        .chars()
+        .take(80)
+        .map(|c| {
+            if c == '/' || c == ':' || c.is_control() {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+    let label = if label.is_empty() || label == "." || label == ".." {
+        "NTFS"
+    } else {
+        &label
+    };
+    for suffix in 0..100 {
+        let target = if suffix == 0 {
+            directory.join(label).to_string_lossy().into_owned()
+        } else {
+            directory
+                .join(format!("{label}-{id}-{suffix}"))
+                .to_string_lossy()
+                .into_owned()
+        };
+        match fs::symlink_metadata(&target) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(target),
+            Err(e) => return Err(e.to_string()),
+            Ok(_) => {}
+        }
+    }
+    Err("没有可用的磁盘挂载名称".into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn disk_labels_are_safe_and_existing_paths_are_not_reused() {
+        let directory = std::env::temp_dir().join(format!("macntfs-label-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(directory.join("BackUp"), b"existing user data").unwrap();
+        assert_eq!(
+            choose_named_target(&directory, "BackUp", "disk5s3").unwrap(),
+            directory.join("BackUp-disk5s3-1").to_string_lossy()
+        );
+        assert_eq!(
+            fs::read(directory.join("BackUp")).unwrap(),
+            b"existing user data"
+        );
+        assert_eq!(
+            choose_named_target(&directory, "a/b:c", "disk5s3").unwrap(),
+            directory.join("a_b_c").to_string_lossy()
+        );
+        assert_eq!(
+            choose_named_target(&directory, "..", "disk5s3").unwrap(),
+            directory.join("NTFS").to_string_lossy()
+        );
+        fs::remove_dir_all(directory).unwrap();
+        assert!(!sessions::valid_volume_target("/Volumes/a/../../etc"));
+        assert!(!sessions::valid_volume_target("/Volumes/name\n"));
+    }
     #[test]
     fn upgrades_repair_private_host_modes_without_host_setuid_or_shared_writes() {
         assert_eq!(guest_host_mode(0o40700, true), 0o755);

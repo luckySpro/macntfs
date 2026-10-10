@@ -51,7 +51,8 @@ pub fn load() -> Result<Vec<Session>> {
     if sessions.iter().any(|s| {
         !crate::system::valid_id(&s.id)
             || !["kernel", "fskit", "microvm"].contains(&s.backend.as_str())
-            || s.target != target(&s.id, &s.backend)
+            || !(s.target == target(&s.id, &s.backend)
+                || s.backend == "microvm" && valid_volume_target(&s.target))
     }) {
         return Err("挂载记录格式无效".into());
     }
@@ -84,13 +85,26 @@ pub fn validate_mounted_backend(
     Ok(())
 }
 pub fn record(volume: &Volume, backend: &str) -> Result<()> {
+    record_at(volume, backend, &target(&volume.id, backend))
+}
+pub fn valid_volume_target(target: &str) -> bool {
+    let path = Path::new(target);
+    path.parent() == Some(Path::new("/Volumes"))
+        && path.file_name().is_some_and(|s| s != "." && s != "..")
+        && !target.chars().any(char::is_control)
+        && !target.ends_with('/')
+}
+pub fn record_at(volume: &Volume, backend: &str, target: &str) -> Result<()> {
+    if backend == "microvm" && !valid_volume_target(target) {
+        return Err("无效挂载目录".into());
+    }
     let mut sessions = load()?;
     sessions.retain(|s| s.id != volume.id);
     sessions.push(Session {
         id: volume.id.clone(),
         uuid: volume.uuid.clone(),
         backend: backend.into(),
-        target: target(&volume.id, backend),
+        target: target.into(),
     });
     let temporary = Path::new(RUNTIME).join("sessions.tmp");
     if temporary.exists() {
@@ -126,10 +140,16 @@ pub fn is_loopback_source(source: &str) -> bool {
         .is_some_and(|ip| ip.is_loopback())
 }
 pub fn managed_mounts(table: &[MountEntry]) -> Vec<&MountEntry> {
+    let recorded = load().unwrap_or_default();
     table
         .iter()
         .filter(|m| {
-            ["/Volumes/NTFS-", "/Volumes/macntfs-VM-"]
+            recorded.iter().any(|s| {
+                s.target == m.target
+                    && s.backend == "microvm"
+                    && m.kind == "nfs"
+                    && is_loopback_source(&m.source)
+            }) || ["/Volumes/NTFS-", "/Volumes/macntfs-VM-"]
                 .iter()
                 .any(|prefix| {
                     m.target

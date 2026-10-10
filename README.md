@@ -155,3 +155,7 @@ Installed 0.3.19 advances past mount execution but vmproxy cannot create `/etc/l
 ### 0.3.21 repair retained upgrade directory modes
 
 Installed 0.3.20 still had root-owned `/etc/lvm` mode 0700: macOS Installer retained old directory permissions during upgrade. Postinstall now explicitly repairs host permissions for every verified guest metadata entry before restoring guest attributes. Root ownership and write protections remain intact; no host setuid/setgid bits are added. Validation simulates retained private directory modes; physical host NFS remains pending installation.
+
+### 0.3.22 MicroVM volume names
+
+MicroVM mounts now use the original NTFS label as the Finder-visible mount point, with safe character normalization and collision suffixes. Root session records retain the actual target, and recognition, update guards and safe eject include named NFS mounts. Legacy session paths remain supported. Empty recorded mount points are removed only after normal unmount. Live 0.3.21 NFS mounting has been observed. A macOS NSWorkspace custom-volume-icon attempt failed on the live NFS volume; its newly created icon files were removed and no unsupported icon workaround is shipped. NFS Finder icon parity remains unavailable in this release.

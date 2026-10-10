@@ -499,6 +499,12 @@ pub(crate) fn eject(id: &str, uuid: &str) -> Result<String> {
             {
                 return Err("磁盘仍在使用，已停止推出。请关闭文件后重试".into());
             }
+            // Remove only our recorded, root-owned empty mount point after the
+            // VM has released it. Never remove contents or reuse another volume.
+            let target = Path::new(&session.target);
+            if target.exists() && check_root_path(target).is_ok() {
+                let _ = fs::remove_dir(target);
+            }
         }
     }
     if !volume
@@ -512,6 +518,7 @@ pub(crate) fn eject(id: &str, uuid: &str) -> Result<String> {
     Ok("已安全推出整块磁盘，可拔下连接线".into())
 }
 pub fn ensure_update_safe() -> Result<()> {
+    crate::sessions::load()?;
     let mounts = crate::sessions::mount_table()?;
     if !crate::sessions::managed_mounts(&mounts).is_empty() {
         return Err("更新前请先安全推出 macntfs 管理的磁盘；关闭正在使用的文件后重试".into());
