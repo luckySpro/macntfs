@@ -18,8 +18,7 @@ Pinned inputs:
   Reference DMG SHA256:
   `d46e3c274250e55427149cf38dfa42f915d74c8b3262630e326d6610032f6ea6`.
 - libkrun 1.19.3 (Apache-2.0), and other Rust dependencies: exact versions and
-  checksums are in anylinuxfs/Cargo.lock. Sources are cached for the development build; the complete corresponding-source
-  release archive must be produced before public binary distribution.
+  checksums are in anylinuxfs/Cargo.lock. The corresponding-source release archive includes the vendored host and guest Rust dependencies.
 - Linux 6.12.62 (GPL-2.0): kernel files from nohajc/libkrunfw v6.12.62-rev1,
   commit `9fe60c621c3dce85680274262c1be90046dbd6fc`; upstream kernel and its
   corresponding configuration/patches are cached locally for the corresponding-source archive.
@@ -31,8 +30,8 @@ Pinned inputs:
   `sha256:d858bb5442632a31bd4bca6c5e601dbe6b536fd7942092ea6a08a0a95805693c`.
   The provisioned guest package database is retained in the offline payload.
   Package versions and Alpine build-recipe commits are retained in the guest database.
-  Public distribution requires collecting the matching package sources and recipes
-  into a corresponding-source archive; this development preview has not been published.
+  The release archive includes all 44 installed package origins, their exact
+  aports recipes and SHA-512-verified source inputs.
 
 The runtime contains a fully provisioned root filesystem. No initializer is
 shipped or invoked at runtime. A damaged/missing image causes a repair message,

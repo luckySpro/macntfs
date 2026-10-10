@@ -136,7 +136,7 @@ Apple Silicon / macOS 13+ 可手动选择 MicroVM 实验模式。Linux、ntfs-3g
 
 已用临时 NTFS 镜像验证离线启动、下级文件读写、同步、卸载与重新探测。macOS NFS/真实设备热插拔尚未实测，Word 直接编辑及大批量文件传输仍有上游限制。每个分区的虚拟机内存上限为 512 MiB。
 
-开发构建：安装 util-linux/gettext/llvm/lld/pkg-config，运行 `python3 scripts/build-microvm.py`，然后 `bash scripts/package.sh`。构建阶段需要网络，最终运行包不包含镜像初始化器。完整 GPL 对应源码归档尚待收集，发布流水线会阻止缺失源码的二进制发布。参见 [第三方说明](THIRD_PARTY_MICROVM.md)。
+开发构建：安装 util-linux/gettext/llvm/lld/pkg-config，运行 `python3 scripts/build-microvm.py`，然后 `bash scripts/package.sh`。构建阶段需要网络，最终运行包不包含镜像初始化器。发布前运行 `python3 scripts/archive-microvm-sources.py` 和 `python3 scripts/verify-microvm-sources.py` 收集并校验对应源码；流水线会阻止缺失源码的二进制发布。参见 [第三方说明](THIRD_PARTY_MICROVM.md)。
 
 ## 0.3.15 开发预览：大文件写入优化
 
