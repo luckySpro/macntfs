@@ -6,7 +6,9 @@ on:
         required: true
         type: string
 permissions:
-  contents: read
+  # GitHub requires write permission to read unpublished draft releases.
+  # The job downloads and verifies only; it never publishes or edits a release.
+  contents: write
 jobs:
   verify:
     runs-on: macos-15
