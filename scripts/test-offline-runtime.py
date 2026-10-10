@@ -7,6 +7,7 @@ import argparse, os, pathlib, subprocess, tempfile, time
 parser=argparse.ArgumentParser()
 parser.add_argument('--mkntfs', default='/opt/homebrew/opt/ntfs-3g-mac/sbin/mkntfs')
 parser.add_argument('--hold', type=int, default=0, help='Seconds to keep disposable Finder fixture mounted (max 60)')
+parser.add_argument('--large-io', action='store_true', help='Use an 8 GiB sparse image and the kernel performance options')
 args=parser.parse_args()
 assert 0 <= args.hold <= 60
 root=pathlib.Path(__file__).resolve().parents[1]
@@ -15,13 +16,14 @@ mount=pathlib.Path(f'/Volumes/macntfs-Test-{os.getpid()}')
 if mount.exists(): raise SystemExit('Test mount path already exists')
 with tempfile.TemporaryDirectory(prefix='ntfs-desktop-test-') as directory:
     image=pathlib.Path(directory)/'roundtrip.img'
-    with image.open('wb') as stream: stream.truncate(32*1024*1024)
+    with image.open('wb') as stream: stream.truncate(8*1024**3 if args.large_io else 32*1024*1024)
     subprocess.run([args.mkntfs,'--fast','--force','-L','NTFS-DESKTOP-TEST',str(image)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
     subprocess.run([str(runtime/'ntfs-3g.probe'),'--readwrite',str(image)],check=True)
     log=pathlib.Path(directory)/'driver.log'
     mounted=False
     with log.open('w') as output:
-        child=subprocess.Popen([str(runtime/'ntfs-3g'),str(image),str(mount),'-o',f'rw,norecover,no_detach,windows_names,streams_interface=openxattr,volname=macntfs-Test,volicon=/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns,uid={os.getuid()},gid={os.getgid()}'],stdin=subprocess.DEVNULL,stdout=output,stderr=output)
+        performance=',big_writes,iosize=1048576' if args.large_io else ''
+        child=subprocess.Popen([str(runtime/'ntfs-3g'),str(image),str(mount),'-o',f'rw,norecover,no_detach,windows_names,streams_interface=openxattr,volname=macntfs-Test,volicon=/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns,uid={os.getuid()},gid={os.getgid()}{performance}'],stdin=subprocess.DEVNULL,stdout=output,stderr=output)
         try:
             deadline=time.monotonic()+20
             while time.monotonic()<deadline:

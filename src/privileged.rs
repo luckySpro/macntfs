@@ -221,6 +221,11 @@ pub fn execute(args: Vec<String>) -> Result<String> {
         let finder = finder_options(&volume.name);
         let mut options =
             format!("rw,norecover,local,windows_names,uid={uid},gid={gid},{finder}{mode}");
+        if args[3] != "fskit" {
+            // Larger requests reduce kernel/userspace round trips during copies.
+            // Keep FSKit on its own defaults and retain NTFS safety checks.
+            options.push_str(",big_writes,iosize=1048576");
+        }
         let icon = Path::new(
             "/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns",
         );
