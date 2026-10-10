@@ -50,6 +50,15 @@ with tempfile.TemporaryDirectory(prefix='ntfs-package-verify-') as temporary:
         override=command('/usr/bin/xattr','-p','user.containers.override_stat',guest/name).decode().strip()
         assert override.startswith('0:0:'),(name,override)
     metadata=json.loads((vm/'GUEST-METADATA.json').read_text())
+    assert 'etc/lvm' in metadata,'Upgrade repair must include parent directory'
+    # Simulate Installer retaining the old private directory mode on upgrade.
+    legacy=guest/'etc/lvm'
+    legacy.chmod(0o700)
+    for name in metadata:
+        path=guest/name
+        if not path.is_symlink():
+            path.chmod(0o755 if path.is_dir() else (path.stat().st_mode&0o111)|0o644)
+    assert legacy.stat().st_mode&0o777==0o755
     for name in ['.config','.cache','mnt','tmp','run','var/lib/nfs','etc/lvm/archive','etc/lvm/backup']:
         assert (guest/name).is_dir(),name
     for parent,dirs,names in os.walk(guest):

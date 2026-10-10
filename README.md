@@ -151,3 +151,7 @@ The installed 0.3.18 guest mount executable remained root-owned host mode 0600. 
 ### 0.3.20 immutable guest startup directories
 
 Installed 0.3.19 advances past mount execution but vmproxy cannot create `/etc/lvm/archive` in the root-owned host image. Packaging now precreates all eight vmproxy temporary filesystem mount points with guest root metadata. The disposable package-derived VM test makes host image directories non-writable before startup, preventing caller-owned test fixtures from masking this issue. Physical host NFS mounting remains unverified until installation.
+
+### 0.3.21 repair retained upgrade directory modes
+
+Installed 0.3.20 still had root-owned `/etc/lvm` mode 0700: macOS Installer retained old directory permissions during upgrade. Postinstall now explicitly repairs host permissions for every verified guest metadata entry before restoring guest attributes. Root ownership and write protections remain intact; no host setuid/setgid bits are added. Validation simulates retained private directory modes; physical host NFS remains pending installation.

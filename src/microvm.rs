@@ -112,6 +112,15 @@ pub fn prepare_guest_metadata() -> Result<()> {
         privileged::check_root_path(&guest.join(name))?;
     }
     for (name, value) in metadata {
+        // Installer preserves existing directory modes during upgrades. Repair
+        // host accessibility explicitly, rather than relying on payload modes.
+        let path = guest.join(&name);
+        let meta = fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        fs::set_permissions(
+            &path,
+            fs::Permissions::from_mode(guest_host_mode(meta.mode(), meta.is_dir())),
+        )
+        .map_err(|e| e.to_string())?;
         let status = Command::new("/usr/bin/xattr")
             .args(["-w", "user.containers.override_stat", &value])
             .arg(guest.join(name))
@@ -123,6 +132,13 @@ pub fn prepare_guest_metadata() -> Result<()> {
         }
     }
     Ok(())
+}
+fn guest_host_mode(mode: u32, directory: bool) -> u32 {
+    if directory {
+        0o755
+    } else {
+        (mode & 0o111) | 0o644
+    }
 }
 fn validate_guest_metadata(name: &str, value: &str) -> Result<()> {
     if name.is_empty()
@@ -276,6 +292,12 @@ pub fn mount(volume: &Volume, uid: &str, gid: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn upgrades_repair_private_host_modes_without_host_setuid_or_shared_writes() {
+        assert_eq!(guest_host_mode(0o40700, true), 0o755);
+        assert_eq!(guest_host_mode(0o100600, false), 0o644);
+        assert_eq!(guest_host_mode(0o104755, false), 0o755);
+    }
     #[test]
     fn guest_metadata_rejects_traversal_and_invalid_permissions() {
         assert!(validate_guest_metadata("bin/mount", "0:0:0104755").is_ok());
