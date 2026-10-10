@@ -53,6 +53,7 @@ pub fn verify_payload(root: &Path) -> Result<()> {
             "bin/ntfs-3g.probe",
             "bin/ntfs-helper",
             "lib/libfuse.2.dylib",
+            "MicroVM/SHA256SUMS",
         ]
         .contains(&file)
             || seen.contains(&file)
@@ -66,7 +67,7 @@ pub fn verify_payload(root: &Path) -> Result<()> {
         }
         seen.push(file);
     }
-    if seen.len() != 4 {
+    if seen.len() != 5 {
         return Err("组件清单不完整".into());
     }
     Ok(())
@@ -79,6 +80,7 @@ pub fn verify_runtime(root: &Path) -> Result<()> {
         "bin/ntfs-3g.probe",
         "bin/ntfs-helper",
         "lib/libfuse.2.dylib",
+        "MicroVM/SHA256SUMS",
     ] {
         check_root_path(&root.join(file))?;
     }
@@ -106,7 +108,7 @@ fn command(program: &str, args: &[&str]) -> Result<String> {
     }
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
-fn validate_volume(id: &str, uuid: &str) -> Result<Volume> {
+pub(crate) fn validate_volume(id: &str, uuid: &str) -> Result<Volume> {
     if !system::valid_id(id)
         || uuid.len() != 36
         || !uuid.bytes().all(|c| c.is_ascii_hexdigit() || c == b'-')
@@ -134,7 +136,10 @@ fn restore(volume: &Volume, created: bool, target: &Path) -> String {
     String::new()
 }
 pub fn execute(args: Vec<String>) -> Result<String> {
-    if args.len() != 4 || args[0] != "mount" || !["kernel", "fskit"].contains(&args[3].as_str()) {
+    if args.len() != 4
+        || args[0] != "mount"
+        || !["kernel", "fskit", "microvm"].contains(&args[3].as_str())
+    {
         return Err("仅接受 mount <partition> <UUID> <kernel|fskit>".into());
     }
     if command("/usr/bin/id", &["-u"])?.trim() != "0" {
@@ -142,11 +147,10 @@ pub fn execute(args: Vec<String>) -> Result<String> {
     }
     let root = Path::new(RUNTIME);
     verify_runtime(root)?;
-    // Check macFUSE's library and framework paths before an elevated driver loads them.
-    check_root_path(&root.join("lib/libfuse.2.dylib"))?;
-    check_root_path(Path::new("/Library/Filesystems/macfuse.fs"))?;
+
     let volume = validate_volume(&args[1], &args[2])?;
     if volume.writable && !volume.mount.is_empty() {
+        crate::sessions::validate_mounted_backend(&volume, &args[3], &crate::sessions::load()?)?;
         return Ok("磁盘已经可以读写".into());
     }
     let os = system::environment().os;
@@ -165,6 +169,14 @@ pub fn execute(args: Vec<String>) -> Result<String> {
     {
         return Err("未找到有效的桌面登录用户".into());
     }
+    if args[3] == "microvm" {
+        if !crate::microvm::supported(&os) {
+            return Err("微虚拟机需要 Apple Silicon 和 macOS 13 或更新版本".into());
+        }
+        return crate::microvm::mount(&volume, &uid, &gid);
+    }
+    check_root_path(&root.join("lib/libfuse.2.dylib"))?;
+    check_root_path(Path::new("/Library/Filesystems/macfuse.fs"))?;
     let target = PathBuf::from(format!("/Volumes/NTFS-{}", volume.id));
     if fs::symlink_metadata(&target).is_ok() {
         // A previous successful session may leave an empty root-owned mount directory.
@@ -210,6 +222,11 @@ pub fn execute(args: Vec<String>) -> Result<String> {
         let finder = finder_options(&volume.name);
         let mut options =
             format!("rw,norecover,local,windows_names,uid={uid},gid={gid},{finder}{mode}");
+        if args[3] != "fskit" {
+            // Larger requests reduce kernel/userspace round trips during copies.
+            // Keep FSKit on its own defaults and retain NTFS safety checks.
+            options.push_str(",big_writes,iosize=1048576");
+        }
         let icon = Path::new(
             "/System/Library/Extensions/IOStorageFamily.kext/Contents/Resources/External.icns",
         );
@@ -287,15 +304,18 @@ pub fn execute(args: Vec<String>) -> Result<String> {
         Ok(())
     })();
     match attempt {
-        Ok(()) => Ok(format!(
-            "已开启读写：{} · {}",
-            volume.name,
-            if args[3] == "fskit" {
-                "FSKit"
-            } else {
-                "内核后端"
-            }
-        )),
+        Ok(()) => {
+            crate::sessions::record(&volume, &args[3])?;
+            Ok(format!(
+                "已开启读写：{} · {}",
+                volume.name,
+                if args[3] == "fskit" {
+                    "FSKit"
+                } else {
+                    "内核后端"
+                }
+            ))
+        }
         Err(error) => {
             if inflight {
                 return Err(format!(
@@ -443,4 +463,84 @@ mod finder_tests {
             255
         );
     }
+}
+
+pub(crate) fn probe_safe(id: &str) -> Result<()> {
+    if !system::valid_id(id) {
+        return Err("无效磁盘身份".into());
+    }
+    let out = Command::new(format!("{RUNTIME}/bin/ntfs-3g.probe"))
+        .args(["--readwrite", &format!("/dev/{id}")])
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+        .env("LC_ALL", "C")
+        .output()
+        .map_err(|e| e.to_string())?;
+    if out.status.success() {
+        Ok(())
+    } else {
+        Err(probe_diagnostic(out.status.code(), &String::from_utf8_lossy(&out.stderr)).into())
+    }
+}
+pub(crate) fn eject(id: &str, uuid: &str) -> Result<String> {
+    let volume = validate_volume(id, uuid)?;
+    let sessions = crate::sessions::load()?;
+    // Ejecting a physical disk includes every managed VM partition on that disk.
+    let physical = system::scan_physical()?;
+    for session in sessions.iter().filter(|s| s.backend == "microvm") {
+        if physical
+            .iter()
+            .any(|v| v.id == session.id && v.uuid == session.uuid && v.parent == volume.parent)
+        {
+            crate::microvm::command(&["unmount", &session.target, "--wait-for-vm", "30"], 40)?;
+            if crate::sessions::mount_table()?
+                .iter()
+                .any(|m| m.target == session.target)
+            {
+                return Err("磁盘仍在使用，已停止推出。请关闭文件后重试".into());
+            }
+            // Remove only our recorded, root-owned empty mount point after the
+            // VM has released it. Never remove contents or reuse another volume.
+            let target = Path::new(&session.target);
+            if target.exists() && check_root_path(target).is_ok() {
+                let _ = fs::remove_dir(target);
+            }
+            crate::sessions::forget(&session.target)?;
+        }
+    }
+    if !volume
+        .parent
+        .strip_prefix("disk")
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|c| c.is_ascii_digit()))
+    {
+        return Err("无效磁盘标识".into());
+    }
+    command("/usr/sbin/diskutil", &["eject", &volume.parent])?;
+    Ok("已安全推出整块磁盘，可拔下连接线".into())
+}
+pub fn ensure_update_safe() -> Result<()> {
+    crate::sessions::load()?;
+    let mounts = crate::sessions::mount_table()?;
+    if !crate::sessions::managed_mounts(&mounts).is_empty() {
+        return Err("更新前请先安全推出 macntfs 管理的磁盘；关闭正在使用的文件后重试".into());
+    }
+    // Also reject a VM/driver still starting or tearing down without a mount entry.
+    for executable in [
+        Path::new(RUNTIME).join("bin/ntfs-3g"),
+        crate::microvm::root().join("bin/anylinuxfs"),
+    ] {
+        if executable.exists() {
+            let out = Command::new("/usr/sbin/lsof")
+                .args(["-t", "--"])
+                .arg(executable)
+                .output()
+                .map_err(|e| e.to_string())?;
+            match out.status.code() {
+                Some(1) => {}
+                Some(0) => return Err("读写服务尚未退出，请稍后重试更新".into()),
+                _ => return Err("无法确认读写服务已退出，已停止更新".into()),
+            }
+        }
+    }
+    Ok(())
 }

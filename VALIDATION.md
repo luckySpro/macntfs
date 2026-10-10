@@ -146,3 +146,75 @@
 - 完整 PKG 载荷、权限、依赖与组件签名校验通过；两个更新清单的版本签名及篡改拒绝验证通过。
 - GitHub v0.3.12 的 9 项资产哈希与本地一致；真实 Tauri updater 模拟 v0.3.11 客户端检测新版、下载完整 PKG、验证版本签名，下载内容与本地包逐字节一致。未执行系统安装。
 - 测试及构建应用副本移入废纸篓并取消注册，正式应用和设置保留。
+
+
+## 0.3.13 开发预览
+
+19 项 Rust 测试、Clippy（-D warnings）、三种主题与四种语言的模拟 IPC 界面回归通过。更新按钮在存在管理卷时禁用，后端与 PKG preinstall 再独立检查；此检查不替代系统安装器的真实安装测试。
+
+离线 MicroVM 在临时 32 MiB NTFS 镜像上启动成功：Linux aarch64、下级文件写入与读回、sync、正常卸载、宿主重新探测通过，无 root 授权且未触碰真实硬盘。此测试只验证客体驱动与离线镜像，不验证 macOS NFS 挂载、真实设备插拔或大批量传输。
+
+PKG 静态校验通过：原厂 macFUSE 组件未修改、签名、5 项核心清单、完整 VM 文件/符号链接哈希、无 Homebrew 动态库依赖、hypervisor entitlement、更新保护组件、包展开后的 Linux UID/GID 扩展属性。虚拟机根目录的绝对 Linux 符号链接只在 Runtime PKG 内，不放入 macOS 签名应用的资源目录。
+
+本版本是本机开发预览，不推送 GitHub 强制更新。公开二进制发行前需补齐完整对应源码归档并完成真实 NFS/设备验证；正式已安装应用及用户磁盘未被替换或操作。
+
+
+## 0.3.14：安装后实机复核及补丁
+
+已安装 0.3.13 的正式应用与 launchd 助手均为 0.3.13，助手正常连接；实际外置 NTFS 卷使用 macFUSE 稳定内核模式，可读写。独立临时目录中的下级文本、4 MiB 随机文件写入/读回/哈希比对、改名、复制通过，测试目录已清理。用户其他文件未被修改，未执行重挂载或推出。
+
+实际 GUI 的诊断检查与导出成功，JSON 仅包含版本、检查项和无标识磁盘摘要。Finder 打开正确卷；关闭主窗口后 GUI PID 保持，窗口恢复。英文/系统语言与办公/深色风格切换成功，测试后恢复 auto / Graphite / Auto。更新页显示“最新版本”，尚无线上新包，因此未验证真实更新下载安装流程。菜单栏按钮和真实设备推出/热插拔未在本轮完成。
+
+定位并修正：已有实际内核挂载却仍将驱动授权标为待确认；两份 fnv 许可证 0640 在安装后归 root，导致普通用户 codesign 完整校验报 Permission denied；最近操作在切换语言后未翻译。新包统一保证应用资源对普通用户可读，BOM 检查增加普通用户读取权限检查。补丁未自动覆盖已安装应用。
+
+微虚拟机 NFS 实盘测试仍未执行，不能把稳定内核模式的成功视为微虚拟机验证通过。
+
+补丁验证：20 项 Rust 测试、严格 Clippy 与界面回归通过（新增英文历史操作提示检查）。只读临时检查程序在当前实际挂载上确认新诊断逻辑将驱动/磁盘权限标为通过，并确认更新保护返回拒绝；未执行组件替换。新 PKG 的展开和应用资源普通用户读取权限静态校验通过。
+# 0.3.16 双模式预览验证
+
+Rust 覆盖活动挂载/操作期间拒绝模式切换、偏好设置仍可保存、旧设置保留、无 macFUSE 的兼容机器首次模式选择，以及遗留稳定挂载和记录中的微虚拟机挂载不能被冒充为另一后端。模式改变前由 root 助手执行串行只读检查，包含启动/退出尚未完成但没有挂载条目的服务。
+
+界面模拟回归覆盖三种主题、四种语言、免内核模式跳过驱动授权、模式选择在活动挂载时禁用、菜单面板与更新保护。离线 Linux 启动、NTFS 子目录文件写入/读取、sync、卸载和主机重新 probe 已通过；稳定内核模式的 8 GiB 稀疏镜像文件、图标、扩展属性及安全探测回归通过。
+
+安装包使用一个可选 macFUSE 选择绑定原始 Core 和 PreferencePane，两者的签名载荷未改动。Installer 实际只读计划验证取消该项后 selected 为 0；实际 JavaScript 函数在模拟 macOS 12/13/27、无驱动/已有同版/已有更高版条件下验证默认选择及禁用逻辑。包签名、哈希、root 权限及本地依赖完整性检查通过。
+
+限制：本轮没有升级用户本机应用、卸载已有 macFUSE、改变启动安全策略、切换用户硬盘模式或测试实体 NFS 挂载。没有全新无 macFUSE 系统的完整安装验证，也没有证明免内核模式达到 0.3.15 内核模式的实盘速度。因此仍保留实验性标记，不发布为必需更新。
+# 0.3.17 launchd 身份传递修复
+
+实际安装的 0.3.16 操作日志两次出现 `Could not determine invoking user: This program must not be run directly by root; use sudo instead`，没有创建虚拟机日志，也无运行中的 anylinuxfs/gvproxy 或 NFS 挂载。这确认失败发生在虚拟机启动之前，而不是磁盘访问或 NFS 阶段。
+
+0.3.17 从系统控制台元数据取得非 root UID/GID，拒绝符号链接和 UID 0，清空继承环境并仅传入固定 PATH、LC_ALL 与上游工具需要的身份变量。真实 shell 子进程验证预先设置的 root 身份和 HOME 被清除、正确 UID/GID 保留；日志测试验证仅本次失败内容及 8 KiB 限制。24 项 Rust 测试、严格 Clippy 通过。没有使用 root 终端、sudo 凭据或跳过应用审计身份检查。
+
+本轮未在用户机器安装新助手或声称 NFS 实盘挂载已通过；该验证需要用户通过系统安装器完成新版安装。微虚拟机磁盘模式仍为实验性。
+
+### 0.3.18 regression scope
+
+Observed installed 0.3.17: guest `/bin/mount` had host mode 0600 and no override_stat attribute, while the source carried `0:0:0104755`; VM failed mounting configuration tmpfs before NFS startup. Added authenticated payload metadata restoration during postinstall, metadata path/value validation, unpacked-package attribute restoration checks and guest tmpfs mount execution in the disposable NTFS roundtrip. No physical disk was written. Actual host NFS mounting still requires the updated installation.
+
+Results: 25 Rust tests and strict clippy passed. Full PKG integrity/installer-mode validation passed. Disposable VM test used the expanded 0.3.18 PKG, restored its recorded metadata, executed guest tmpfs mount/unmount, NTFS nested write/read, sync/unmount and host safety re-probe successfully.
+
+### 0.3.19 host image access correction
+
+The installed 0.3.18 guest mount executable remained root-owned host mode 0600. Guest override attributes alone do not provide host file access. All regular guest image files are now host-readable (0644 plus existing execute bits), directories searchable (0755), with root ownership, no group/other writes and no host setuid/setgid. Guest permissions remain separately restored from the verified metadata. Package validation checks every unpacked image file for ordinary-user access. Physical host NFS validation is still pending installation.
+
+### 0.3.20 immutable guest startup directories
+
+Installed 0.3.19 advances past mount execution but vmproxy cannot create `/etc/lvm/archive` in the root-owned host image. Packaging now precreates all eight vmproxy temporary filesystem mount points with guest root metadata. The disposable package-derived VM test makes host image directories non-writable before startup, preventing caller-owned test fixtures from masking this issue. Physical host NFS mounting remains unverified until installation.
+
+0.3.20 results: full package and installer choice validation passed. Expanded-PKG fixture with non-writable host guest directories passed startup, NTFS nested write/read, sync/unmount, host re-probe and guest kernel NFS server start/stop (gvproxy/virtio-net, rpcbind first). This does not certify host NFS mounting of the physical disk.
+
+### 0.3.21 repair retained upgrade directory modes
+
+Installed 0.3.20 still had root-owned `/etc/lvm` mode 0700: macOS Installer retained old directory permissions during upgrade. Postinstall now explicitly repairs host permissions for every verified guest metadata entry before restoring guest attributes. Root ownership and write protections remain intact; no host setuid/setgid bits are added. Validation simulates retained private directory modes; physical host NFS remains pending installation.
+
+### 0.3.22 MicroVM volume names
+
+MicroVM mounts now use the original NTFS label as the Finder-visible mount point, with safe character normalization and collision suffixes. Root session records retain the actual target, and recognition, update guards and safe eject include named NFS mounts. Legacy session paths remain supported. Empty recorded mount points are removed only after normal unmount. Live 0.3.21 NFS mounting has been observed. A macOS NSWorkspace custom-volume-icon attempt failed on the live NFS volume; its newly created icon files were removed and no unsupported icon workaround is shipped. NFS Finder icon parity remains unavailable in this release.
+
+### 0.3.23 unexpected disconnect handling
+
+The privileged helper detects missing physical partitions independently of the GUI, persists disconnected MicroVM sessions, and attempts normal teardown after three successful scans. Failed teardown retains the record and retries; a reappearing disk identifier cannot make the stale session writable again. Successful safe eject removes its session record. No forced unmount, forced repair, or writer termination is introduced.
+
+28 Rust tests and strict clippy passed, including backend scoping and identifier-reappearance checks. On the installed 0.3.22 system, Finder's desktop Connected servers setting was enabled and BackUp was added to the native sidebar; its external-drive description and eject button were observed. The setup guide now explains these settings in four languages. Actual desktop pixels and physical forced-unplug behavior have not been verified. Pending writes can still be lost on physical removal; install the new helper before testing disconnect handling.
+
+0.3.23 full offline package validation, installer-mode checks and mocked four-language UI regression passed. No physical disconnect or updated installed-helper cleanup was exercised.

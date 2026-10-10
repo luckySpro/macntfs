@@ -17,4 +17,21 @@ if /usr/sbin/lsof -t /var/run/com.macntfs.mount-active >/dev/null 2>&1; then
   echo 'macntfs is mounting a disk. Wait for completion and retry.' >&2
   exit 1
 fi
+# Also protect manual PKG installs: established mounts and VM/driver teardown.
+if /sbin/mount | /usr/bin/grep -Eq ' on /Volumes/(NTFS|macntfs-VM)-disk[0-9]+s[0-9]+ \('; then
+  /bin/rm -f /var/run/com.macntfs.updating
+  echo 'Safely eject disks managed by macntfs before updating. Close open files and retry.' >&2
+  exit 1
+fi
+for ntfs_binary in '/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-3g' '/Library/Application Support/NTFS Desktop/Runtime/MicroVM/bin/anylinuxfs'; do
+  if [ -f "$ntfs_binary" ]; then
+    ntfs_lsof=0
+    /usr/sbin/lsof -t -- "$ntfs_binary" >/dev/null 2>&1 || ntfs_lsof=$?
+    if [ "$ntfs_lsof" != 1 ]; then
+      /bin/rm -f /var/run/com.macntfs.updating
+      echo 'Disk service is active or cannot be inspected. Wait for safe unmount and retry.' >&2
+      exit 1
+    fi
+  fi
+done
 /bin/launchctl bootout system/com.macntfs.helper >/dev/null 2>&1 || true

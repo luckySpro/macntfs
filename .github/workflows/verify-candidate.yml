@@ -1,0 +1,30 @@
+name: Verify release candidate
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci && npm run build
+      - run: cargo test --locked --workspace && cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Download and verify candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ inputs.release_id }}
+        run: |
+          mkdir -p dist
+          python3 scripts/download-release.py "$RELEASE_ID"
+          python3 scripts/verify-microvm-sources.py
+          cargo run --locked -p macntfs --example verify-update

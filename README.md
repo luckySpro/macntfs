@@ -1,4 +1,33 @@
 # macntfs【不好用就自己写系列之mac上的ntfs硬盘使用工具】
+
+## 0.3.23 桌面入口与异常断开处理
+
+免内核模式通过本机 NFS 提供磁盘。在 Finder 设置 → 通用中勾选「已连接的服务器」可显示桌面入口；打开磁盘后选择「文件 → 添加到边栏」可按原硬盘名称快速访问。首次使用向导提供相应说明。NFS 卷的系统图标不保证与原生磁盘完全相同。
+
+后台助手会确认物理分区消失、标记旧会话并尝试正常清理；清理失败时保留记录并重试。快速重新插入也不会复用旧会话的可写状态。不会强制卸载、终止写入进程或自动修复文件系统。拔盘前仍应安全推出；直接拔盘可能丢失未完成的写入。异常拔盘的实盘验证仍待完成。
+
+## 0.3.17 微虚拟机启动修复
+
+0.3.16 在真实 launchd 助手中启动微虚拟机会在解析调用用户时失败：anylinuxfs 原本从 sudo 环境或父进程查找普通用户，而 launchd 助手的父进程均为 root。0.3.17 从系统 `/dev/console` 获取已登录用户 UID/GID，在清空继承环境后作为 anylinuxfs 所需的身份信息传入；不运行 sudo、不保存密码、不接受客户端传来的身份，也不修改系统认证策略。
+
+失败时「技术详情」显示本次调用的退出状态和最多 8 KiB 日志，不混入历史尝试，不再笼统提示磁盘权限。24 项 Rust 测试与严格 Clippy 通过；新增真实子进程环境验证及日志隔离/限长测试。完整包更新后才能由正式助手应用修复；实际外置 NTFS/NFS 挂载仍待安装后复测，保留实验性标记。
+
+## 0.3.16 双模式开发预览
+
+同一个应用和版本管理两种后端，在「设置与更新 → 读写模式」选择：
+
+- **稳定模式**：macFUSE + NTFS-3G，保留 0.3.15 的 1 MiB I/O 优化，支持插入后自动读写。首次驱动授权可能需要恢复模式设置及重启。
+- **免内核扩展模式（实验性）**：内置 Linux 微虚拟机 + 本机 NFS，Apple Silicon、macOS 13+，无需 macFUSE 扩展或降低启动安全性。仍需管理员安装及助手磁盘访问授权，目前仅手动挂载。
+
+完整 PKG 的「安装类型」页可勾选或取消「稳定模式组件 · macFUSE」。macOS 13+ 新机器默认不勾选；已有 macFUSE 的机器默认保留组件更新；更高版本不会降级。macOS 12 必须选择稳定组件。不勾选不会卸载已有 macFUSE；两种用户均获得同一应用、助手与离线微虚拟机组件。
+
+已有设置在升级后保留。没有设置且未安装 macFUSE 的兼容机器，首次启动选择免内核模式；其他机器选择稳定模式。已有 macFUSE 但想使用免内核模式的用户需在应用明确选择，不会因取消安装组件而更改旧设置。免内核模式不提示安装或授权 macFUSE，首次使用向导改为确认模式及助手权限。
+
+**切换前先安全推出所有受管理磁盘**，切换后重新连接并开启读写。挂载、启动或退出服务尚未完成时，后台也会拒绝切换；已挂载磁盘不能被当成另一后端的成功结果。失败后显示原因，不自动回退到另一模式。稳定模式会重新插入自动挂载；免内核模式需手动「开启读写」。取消稳定组件后，日后需要稳定模式可通过应用内「安装组件」打开本地 macFUSE 安装器，无需网络。
+
+更新前先安全推出磁盘、从菜单栏退出，再安装完整 PKG；临时签名助手更新后，可能需要重新添加完整磁盘访问授权。免内核模式仍为开发预览，不保证与稳定模式具有相同速度或兼容性。本轮未更新线上必需更新清单。
+
+验证：`cargo test --offline --workspace`、`node scripts/test-installer-modes.cjs`、`python3 scripts/validate-package.py`、`python3 scripts/test-microvm.py`。安装选择脚本及模拟界面通过不等于在没有 macFUSE 的全新机器完成真实 NTFS/NFS 挂载；物理磁盘端到端测试仍待安装新版后进行。
 核心解决问题：
 1、mac上读写NTFS分区
 2、解决了原来使用时需要下载多个软件，用一个包把所有的进行集成；
@@ -95,3 +124,44 @@ macOS 专用驱动修改记录于 `scripts/patches/macos-device-permission.patch
 启动与后台每小时检查 GitHub 完整安装包清单。发现新版后，主界面显示不可跳过的更新提示，Rust 后端暂停新的手动和自动读写挂载；保留安全推出，已挂载磁盘不会被强行卸载。下载失败可重试，已知更新要求在断网或重启后仍保留，安装达到要求的版本后清除。没有检测到必需更新时仍可离线使用。
 
 安装包经过版本签名验证，系统安装器仍由用户完成管理员认证。更新机制不替代 macOS 兼容性适配；未发布适配版本时，不能保证系统升级后驱动可用。0.3.11 及更早客户端的历史更新提示不会被远程改为强制；安装 0.3.12 后启用此策略。
+
+
+## 0.3.13 开发预览：诊断、安全更新与离线微虚拟机
+
+设置页提供本地诊断，分别显示组件、助手、驱动、磁盘访问、设备发现和挂载状态。助手已连接不再被解释为磁盘权限已取得；尚未实际验证的项目显示“未确认”。导出的 JSON 不包含卷名、UUID、设备路径、文件名或原始错误，也不会上传。
+
+更新前必须安全推出本应用管理的卷；检测到驱动/VM 仍运行或正在挂载时停止替换组件。手动 PKG 安装也先运行独立更新保护组件，然后才安装 macFUSE。等待超时不会强行结束写入。
+
+Apple Silicon / macOS 13+ 可手动选择 MicroVM 实验模式。Linux、ntfs-3g 和 NFS 组件预置在本地，不修改 SIP、恢复模式启动策略、PF 或 VPN 路由；仍需安装管理员授权和磁盘访问许可。通过明确的回环地址传输，网络卷仍可被其他本机进程访问。该模式关闭自动挂载，不会替换默认稳定模式。
+
+已用临时 NTFS 镜像验证离线启动、下级文件读写、同步、卸载与重新探测。macOS NFS/真实设备热插拔尚未实测，Word 直接编辑及大批量文件传输仍有上游限制。每个分区的虚拟机内存上限为 512 MiB。
+
+开发构建：安装 util-linux/gettext/llvm/lld/pkg-config，运行 `python3 scripts/build-microvm.py`，然后 `bash scripts/package.sh`。构建阶段需要网络，最终运行包不包含镜像初始化器。发布前运行 `python3 scripts/archive-microvm-sources.py` 和 `python3 scripts/verify-microvm-sources.py` 收集并校验对应源码；流水线会阻止缺失源码的二进制发布。参见 [第三方说明](THIRD_PARTY_MICROVM.md)。
+
+## 0.3.15 开发预览：大文件写入优化
+
+稳定内核模式改用 1 MiB I/O 块并启用 NTFS-3G `big_writes`，减少大文件复制时的内核与用户态往返。FSKit 与微虚拟机参数保持原状，磁盘状态检查和 `norecover` 继续生效。完整 PKG 更新助手后，正常推出并重新连接磁盘才会应用新参数。
+
+本机同盘实测：旧版单轮 1 GiB 写入约 69 MiB/s，新版三轮约 155–167 MiB/s，SHA-256 校验全部通过。128 MiB 短测没有改善；测试受缓存、文件分配位置和设备状态影响，不保证超大文件也能达到同样速度。详细方法、数字与限制见 [性能检查记录](PERFORMANCE.md)。暂不作为必需更新发布。
+
+开发回归：`python3 scripts/test-offline-runtime.py --large-io` 检查嵌套文件、图标和扩展属性；`python3 scripts/test-write-performance.py` 在独立 8 GiB 稀疏镜像上进行三轮写入对比，正常卸载后检查卷状态。两个命令均不挂载实体磁盘。
+
+### 0.3.18 MicroVM installation repair
+
+Installer may omit Linux guest permission attributes, including the executable mode of `/bin/mount`. The package now carries integrity-checked guest metadata; the root postinstall helper restores only guest override attributes without adding macOS setuid permissions. Failed NFS confirmation includes the current attempt log. Physical MicroVM/NFS validation remains pending installation.
+
+### 0.3.19 host image access correction
+
+The installed 0.3.18 guest mount executable remained root-owned host mode 0600. Guest override attributes alone do not provide host file access. All regular guest image files are now host-readable (0644 plus existing execute bits), directories searchable (0755), with root ownership, no group/other writes and no host setuid/setgid. Guest permissions remain separately restored from the verified metadata. Package validation checks every unpacked image file for ordinary-user access. Physical host NFS validation is still pending installation.
+
+### 0.3.20 immutable guest startup directories
+
+Installed 0.3.19 advances past mount execution but vmproxy cannot create `/etc/lvm/archive` in the root-owned host image. Packaging now precreates all eight vmproxy temporary filesystem mount points with guest root metadata. The disposable package-derived VM test makes host image directories non-writable before startup, preventing caller-owned test fixtures from masking this issue. Physical host NFS mounting remains unverified until installation.
+
+### 0.3.21 repair retained upgrade directory modes
+
+Installed 0.3.20 still had root-owned `/etc/lvm` mode 0700: macOS Installer retained old directory permissions during upgrade. Postinstall now explicitly repairs host permissions for every verified guest metadata entry before restoring guest attributes. Root ownership and write protections remain intact; no host setuid/setgid bits are added. Validation simulates retained private directory modes; physical host NFS remains pending installation.
+
+### 0.3.22 MicroVM volume names
+
+MicroVM mounts now use the original NTFS label as the Finder-visible mount point, with safe character normalization and collision suffixes. Root session records retain the actual target, and recognition, update guards and safe eject include named NFS mounts. Legacy session paths remain supported. Empty recorded mount points are removed only after normal unmount. Live 0.3.21 NFS mounting has been observed. A macOS NSWorkspace custom-volume-icon attempt failed on the live NFS volume; its newly created icon files were removed and no unsupported icon workaround is shipped. NFS Finder icon parity remains unavailable in this release.

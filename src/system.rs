@@ -28,6 +28,7 @@ pub struct Environment {
     pub service: bool,
     pub service_issue: String,
     pub runtime_version: String,
+    pub microvm: bool,
 }
 pub fn resources() -> Option<PathBuf> {
     let executable = std::env::current_exe().ok()?;
@@ -68,6 +69,7 @@ pub fn environment() -> Environment {
         service: service.is_ok(),
         service_issue: service.err().unwrap_or_default(),
         runtime_version: installed.trim().into(),
+        microvm: crate::microvm::ready(),
     }
 }
 pub fn run(program: &str, args: &[&str]) -> Result<String> {
@@ -152,25 +154,38 @@ fn parse_volume(value: &Value) -> Result<Volume> {
         writable: boolean(d, "WritableVolume"),
     })
 }
-pub fn scan() -> Result<Vec<Volume>> {
+pub(crate) fn external_ids() -> Result<std::collections::HashSet<String>> {
     let list = read_plist(&["list", "-plist", "external", "physical"])?;
     let ids = list
         .as_dictionary()
         .and_then(|d| d.get("AllDisks"))
         .and_then(Value::as_array)
         .ok_or("无法读取外置磁盘列表")?;
-    let mut volumes = Vec::new();
-    for id in ids
+    Ok(ids
         .iter()
         .filter_map(Value::as_string)
         .filter(|id| valid_id(id))
-    {
+        .map(str::to_owned)
+        .collect())
+}
+pub(crate) fn scan_physical() -> Result<Vec<Volume>> {
+    let mut volumes = Vec::new();
+    for id in external_ids()?.iter() {
         if let Ok(info) = read_plist(&["info", "-plist", id])
             && let Ok(volume) = parse_volume(&info)
         {
             volumes.push(volume);
         }
     }
+    Ok(volumes)
+}
+pub fn scan() -> Result<Vec<Volume>> {
+    let mut volumes = scan_physical()?;
+    crate::sessions::reconcile(
+        &mut volumes,
+        &crate::sessions::load()?,
+        &crate::sessions::mount_table()?,
+    );
     Ok(volumes)
 }
 fn fresh(v: &Volume) -> Result<Volume> {
@@ -189,13 +204,18 @@ pub fn shell_quote(s: &str) -> String {
 pub fn mount(v: &Volume, backend: crate::settings::Backend) -> Result<String> {
     let v = fresh(v)?;
     if v.writable && !v.mount.is_empty() {
+        crate::sessions::validate_mounted_backend(
+            &v,
+            backend.resolved(&run("/usr/bin/sw_vers", &["-productVersion"])?)?,
+            &crate::sessions::load()?,
+        )?;
         return Ok("磁盘已经可以读写".into());
     }
     let env = environment();
     if !env.runtime {
         return Err(env.runtime_issue);
     }
-    if !env.fuse {
+    if backend != crate::settings::Backend::Microvm && !env.fuse {
         return Err("请先完成离线驱动安装".into());
     }
     crate::privileged::verify_runtime(Path::new(RUNTIME))?;
@@ -210,7 +230,8 @@ pub fn eject(v: &Volume) -> Result<String> {
         .strip_prefix("disk")
         .filter(|s| !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()))
         .ok_or("无效磁盘标识")?;
-    run("/usr/sbin/diskutil", &["eject", &format!("disk{parent}")])?;
+    crate::daemon::request("eject", &v.id, &v.uuid, "")?;
+    let _ = parent;
     Ok("已安全推出整块磁盘，可拔下连接线".into())
 }
 pub fn open_volume(v: &Volume) -> Result<String> {
@@ -268,9 +289,14 @@ pub fn install() -> Result<String> {
     let env = environment();
     let package = if !env.runtime {
         resources.join("Installers/OfflineRuntime.pkg")
-    } else if !env.fuse {
+    } else if !env.fuse
+        && crate::settings::Settings::load().backend != crate::settings::Backend::Microvm
+    {
         resources.join("Installers/Install macFUSE.pkg")
     } else {
+        if crate::settings::Settings::load().backend == crate::settings::Backend::Microvm {
+            return Ok("免内核模式组件已安装，无需安装 macFUSE。请确认助手磁盘访问权限。".into());
+        }
         return Ok("离线运行组件已经安装。若系统仍要求驱动授权，请前往系统设置。".into());
     };
     if !package.is_file() {

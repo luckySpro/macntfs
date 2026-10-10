@@ -31,12 +31,17 @@ struct Snapshot {
     version: &'static str,
     monitor: Monitor,
     required_update: Option<updates::Available>,
+    update_blockers: usize,
 }
 #[tauri::command]
 async fn snapshot(app: tauri::AppHandle) -> Result<Snapshot, String> {
     tauri::async_runtime::spawn_blocking(move || {
         Ok(Snapshot {
             required_update: updates::required(&app),
+            update_blockers: macntfs_core::sessions::managed_mounts(
+                &macntfs_core::sessions::mount_table()?,
+            )
+            .len(),
             volumes: system::scan()?,
             environment: system::environment(),
             settings: Settings::load(),
@@ -57,6 +62,7 @@ fn operation(
     backend: Backend,
 ) -> Result<String, String> {
     match action {
+        "diagnostics-export" => macntfs_core::diagnostics::export(),
         "mount" => system::mount(&volume.ok_or("请选择磁盘")?, backend),
         "eject" => system::eject(&volume.ok_or("请选择磁盘")?),
         "open" => system::open_volume(&volume.ok_or("请选择磁盘")?),
@@ -110,6 +116,12 @@ async fn operate(
     .await
     .map_err(|e| e.to_string())?
 }
+#[tauri::command]
+async fn diagnose() -> Result<macntfs_core::diagnostics::Report, String> {
+    tauri::async_runtime::spawn_blocking(macntfs_core::diagnostics::collect)
+        .await
+        .map_err(|e| e.to_string())
+}
 #[derive(Default)]
 struct SettingsState(Mutex<()>);
 // Keep Cocoa title text and titlebar background aligned with the saved palette.
@@ -138,7 +150,26 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
     if !["auto", "zh-Hans", "zh-Hant", "en", "ja"].contains(&settings.language.as_str()) {
         return Err("Unsupported language".into());
     }
+    let monitor = app.state::<Mutex<Monitor>>();
+    let monitor = monitor.lock().map_err(|e| e.to_string())?;
+    let previous = Settings::load();
+    if previous.backend != settings.backend {
+        macntfs_core::settings::validate_backend_change(
+            previous.backend,
+            settings.backend,
+            &system::run("/usr/bin/sw_vers", &["-productVersion"])?,
+            monitor.busy,
+            !macntfs_core::sessions::managed_mounts(&macntfs_core::sessions::mount_table()?)
+                .is_empty(),
+        )?;
+        // Includes a VM still starting/tearing down after a timeout, even when
+        // no volume is in the mount table. The helper serializes this check.
+        macntfs_core::daemon::request("update-check", "", "", "").map_err(
+            |_| "读写服务仍在运行或助手未连接，请安全推出磁盘并确认助手连接后再切换模式",
+        )?;
+    }
     settings.save()?;
+    drop(monitor);
     let handle = app.clone();
     let theme = settings.theme;
     app.run_on_main_thread(move || {
@@ -438,9 +469,27 @@ fn start_monitor(app: tauri::AppHandle) {
                 let present: HashSet<String> = volumes.iter().map(|v| v.uuid.clone()).collect();
                 attempted.retain(|id| present.contains(id));
                 if let Ok(mut monitor) = app.state::<Mutex<Monitor>>().lock() {
+                    let sessions = macntfs_core::sessions::load().unwrap_or_default();
+                    if !monitor.busy
+                        && monitor.volumes.iter().any(|old| {
+                            !present.contains(&old.uuid)
+                                && sessions.iter().any(|s| {
+                                    s.backend == "microvm"
+                                        && s.uuid == old.uuid
+                                        && s.target == old.mount
+                                })
+                        })
+                    {
+                        monitor.last_event = "磁盘意外断开，后台助手将正常清理残留挂载。未完成的写入可能丢失；重新连接后会再次检查磁盘状态。".into();
+                        monitor.last_error = true;
+                    }
                     monitor.volumes = volumes.clone();
                 }
-                if settings.auto_mount && ready && updates::required(&app).is_none() {
+                if settings.auto_mount
+                    && settings.backend != Backend::Microvm
+                    && ready
+                    && updates::required(&app).is_none()
+                {
                     for volume in &volumes {
                         if (!volume.writable || volume.mount.is_empty())
                             && !attempted.contains(&volume.uuid)
@@ -592,6 +641,7 @@ fn main() {
             save_settings,
             panel_action,
             set_auto_mount,
+            diagnose,
             updates::check_updates,
             updates::install_update
         ])

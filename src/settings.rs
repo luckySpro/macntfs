@@ -8,6 +8,7 @@ pub enum Backend {
     Auto,
     Fskit,
     Kernel,
+    Microvm,
 }
 impl Backend {
     pub fn title(self) -> &'static str {
@@ -15,6 +16,7 @@ impl Backend {
             Self::Auto => "稳定模式（推荐）",
             Self::Fskit => "FSKit · 实验性",
             Self::Kernel => "内核 · 兼容模式",
+            Self::Microvm => "微虚拟机 · 实验性",
         }
     }
     pub fn resolved(self, os: &str) -> Result<&'static str> {
@@ -24,6 +26,8 @@ impl Backend {
             Self::Fskit if supported => Ok("fskit"),
             Self::Fskit => Err("FSKit 需要 macOS 15.4 或更新版本".into()),
             Self::Kernel => Ok("kernel"),
+            Self::Microvm if crate::microvm::supported(os) => Ok("microvm"),
+            Self::Microvm => Err("微虚拟机需要 Apple Silicon 和 macOS 13 或更新版本".into()),
         }
     }
 }
@@ -81,7 +85,17 @@ impl Settings {
         fs::read(data_dir().join("settings.json"))
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
-            .unwrap_or_default()
+            .unwrap_or_else(|| {
+                let os = crate::system::run("/usr/bin/sw_vers", &["-productVersion"])
+                    .unwrap_or_default();
+                Self {
+                    backend: initial_backend(
+                        &os,
+                        std::path::Path::new("/Library/Filesystems/macfuse.fs").is_dir(),
+                    ),
+                    ..Self::default()
+                }
+            })
     }
     pub fn save(&self) -> Result<()> {
         fs::create_dir_all(data_dir()).map_err(|e| e.to_string())?;
@@ -93,6 +107,32 @@ impl Settings {
         .map_err(|e| e.to_string())?;
         fs::rename(path, data_dir().join("settings.json")).map_err(|e| e.to_string())
     }
+}
+pub fn initial_backend(os: &str, fuse_installed: bool) -> Backend {
+    if !fuse_installed && crate::microvm::supported(os) {
+        Backend::Microvm
+    } else {
+        Backend::Auto
+    }
+}
+pub fn validate_backend_change(
+    previous: Backend,
+    next: Backend,
+    os: &str,
+    busy: bool,
+    active_mounts: bool,
+) -> Result<()> {
+    if previous == next {
+        return Ok(());
+    }
+    next.resolved(os)?;
+    if busy || active_mounts {
+        return Err(
+            "请先安全推出所有受管理磁盘，再切换读写模式。重新连接后使用所选模式，不会自动回退。"
+                .into(),
+        );
+    }
+    Ok(())
 }
 #[cfg(test)]
 mod tests {
@@ -124,5 +164,26 @@ mod tests {
         assert!(supports_fskit("26.0"));
         assert_eq!(Backend::Auto.resolved("15.3").unwrap(), "kernel");
         assert!(Backend::Fskit.resolved("14.7").is_err());
+    }
+    #[test]
+    fn switching_requires_idle_unmounted_disks_but_allows_other_preferences() {
+        assert!(
+            validate_backend_change(Backend::Auto, Backend::Microvm, "27.0", false, true).is_err()
+        );
+        assert!(
+            validate_backend_change(Backend::Auto, Backend::Kernel, "27.0", true, false).is_err()
+        );
+        assert!(validate_backend_change(Backend::Auto, Backend::Auto, "27.0", true, true).is_ok());
+        assert!(
+            validate_backend_change(Backend::Microvm, Backend::Kernel, "27.0", false, false)
+                .is_ok()
+        );
+        assert!(
+            validate_backend_change(Backend::Auto, Backend::Fskit, "14.0", false, false).is_err()
+        );
+        assert_eq!(initial_backend("12.0", false), Backend::Auto);
+        assert_eq!(initial_backend("27.0", true), Backend::Auto);
+        #[cfg(target_arch = "aarch64")]
+        assert_eq!(initial_backend("27.0", false), Backend::Microvm);
     }
 }

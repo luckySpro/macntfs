@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+"/Library/Application Support/NTFS Desktop/Runtime/bin/ntfs-helper" prepare-microvm
 /bin/rm -f /var/run/com.macntfs.updating
 /bin/launchctl enable system/com.macntfs.helper
 /bin/launchctl bootstrap system /Library/LaunchDaemons/com.macntfs.helper.plist

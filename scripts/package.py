@@ -11,6 +11,14 @@ build.mkdir(parents=True)
 
 def run(*args): subprocess.run([str(x) for x in args], check=True)
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def readable_app_resources(app):
+    # Source crates may carry 0640 notices. Installed bundles must be readable to
+    # normal users after pkgbuild changes ownership to root; keep execute bits.
+    for parent, dirs, files in os.walk(app):
+        for name in dirs+files:
+            path=pathlib.Path(parent)/name
+            if not path.is_symlink(): path.chmod((path.stat().st_mode & ~0o022) | (0o555 if path.is_dir() else 0o444))
+
 manifest = json.loads((root/'vendor/manifest.json').read_text())
 for name, entry in [('macfuse-5.4.0.dmg',manifest['macfuse']),('ntfs-3g-2026.9.28.tar.gz',manifest['ntfs3g'])]:
     if digest(root/'vendor/downloads'/name) != entry['sha256']: raise SystemExit('Upstream asset checksum mismatch')
@@ -26,7 +34,44 @@ for binary in [runtime/'bin/ntfs-3g',runtime/'bin/ntfs-3g.probe',runtime/'bin/nt
     run('/usr/bin/codesign','--force','--sign',identity,*options,binary)
 # Preserve libfuse's vendor signature. Do not re-sign or modify its contents.
 run('/usr/bin/codesign','--verify','--strict',runtime/'lib/libfuse.2.dylib')
-files = ['bin/ntfs-3g','bin/ntfs-3g.probe','bin/ntfs-helper','lib/libfuse.2.dylib']
+# Both backends are bundled; MicroVM mounting remains manual in this preview.
+microvm = runtime/'MicroVM'
+if not (root/'vendor/microvm/bin/anylinuxfs').is_file(): raise SystemExit('Build the offline microVM payload with scripts/build-microvm.py first')
+run('/usr/bin/ditto','--extattr',root/'vendor/microvm',microvm)
+# Installer does not reliably retain every Linux override_stat attribute (notably
+# setuid mount). Store guest metadata as ordinary, integrity-checked payload data.
+guest_metadata={}
+guest=microvm/'profile/alpine/rootfs'
+# vmproxy mounts temporary writable filesystems here. Their mount points must
+# exist before privilege drop; it cannot mkdir inside the immutable host image.
+for name in ['.config','.cache','mnt','tmp','run','var/lib/nfs','etc/lvm/archive','etc/lvm/backup']:
+    path=guest/name
+    path.mkdir(parents=True,exist_ok=True)
+    run('/usr/bin/xattr','-w','user.containers.override_stat','0:0:0755',path)
+for parent,dirs,names in os.walk(guest):
+    for name in dirs+names:
+        path=pathlib.Path(parent)/name
+        if path.is_symlink(): continue
+        result=subprocess.run(['/usr/bin/xattr','-p','user.containers.override_stat',str(path)],capture_output=True,text=True)
+        if result.returncode==0: guest_metadata[path.relative_to(guest).as_posix()]=result.stdout.strip()
+        # The VM also needs host-side access after privilege drop. Guest overrides
+        # do not grant host read access to root-owned 0600 files. Never set host
+        # setuid bits or give ordinary users write access to the image.
+        path.chmod(0o755 if path.is_dir() else (path.stat().st_mode & 0o111) | 0o644)
+(microvm/'GUEST-METADATA.json').write_text(json.dumps(guest_metadata,sort_keys=True)+'\n')
+run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime','--entitlements',root/'scripts/microvm.entitlements',microvm/'bin/anylinuxfs')
+run('/usr/bin/codesign','--force','--sign',identity,'--options','runtime',microvm/'libexec/gvproxy')
+# Linux files retain guest symlinks; hash links themselves rather than following them.
+vm_entries=[]
+for parent,dirs,names in os.walk(microvm):
+    for name in dirs+names:
+        path=pathlib.Path(parent)/name
+        rel=path.relative_to(microvm).as_posix()
+        if rel=='SHA256SUMS' or rel.startswith('profile/logs/'): continue
+        if path.is_symlink(): vm_entries.append((rel,'L',hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()))
+        elif path.is_file(): vm_entries.append((rel,'F',digest(path)))
+(microvm/'SHA256SUMS').write_text(''.join(f'{sha}  {kind} {name}\n' for name,kind,sha in sorted(vm_entries)))
+files = ['bin/ntfs-3g','bin/ntfs-3g.probe','bin/ntfs-helper','lib/libfuse.2.dylib','MicroVM/SHA256SUMS']
 (runtime/'VERSION').write_text(version+'\n')
 (runtime/'SHA256SUMS').write_text(''.join(f'{digest(runtime/f)}  {f}\n' for f in files))
 packages = build/'packages'; packages.mkdir()
@@ -42,14 +87,17 @@ if app.exists(): shutil.rmtree(app)
 (app/'Contents/MacOS').mkdir(parents=True)
 resources = app/'Contents/Resources'; resources.mkdir()
 shutil.copy2(root/'target/release/macntfs',app/'Contents/MacOS/macntfs')
-shutil.copytree(runtime,resources/'Runtime')
+# Guest absolute symlinks belong only in the installed runtime, never in a signed app.
+shutil.copytree(runtime,resources/'Runtime',ignore=shutil.ignore_patterns('MicroVM'))
+(resources/'Runtime/MicroVM').mkdir()
+shutil.copy2(microvm/'SHA256SUMS',resources/'Runtime/MicroVM/SHA256SUMS')
 (resources/'Installers').mkdir()
 shutil.copy2(packages/'OfflineRuntime.pkg',resources/'Installers/OfflineRuntime.pkg')
 shutil.copy2(root/'vendor/downloads/Install macFUSE.pkg',resources/'Installers/Install macFUSE.pkg')
 shutil.copytree(root/'vendor/licenses',resources/'Licenses')
 shutil.copy2(root/'vendor/macfuse-expanded/Resources/License.rtf',resources/'Licenses/macFUSE-Installer-License.rtf')
 (resources/'Sources').mkdir()
-for name in ['ntfs-3g-2026.9.28.tar.gz','macfuse-library-7a6cdd2.tar.gz']:
+for name in ['ntfs-3g-2026.9.28.tar.gz','macfuse-library-7a6cdd2.tar.gz','anylinuxfs-8aa9ccd.tar.gz']:
     shutil.copy2(root/'vendor/downloads'/name,resources/'Sources'/name)
 shutil.copy2(root/'vendor/manifest.json',resources/'Sources/manifest.json')
 # Collect notices for compiled Rust dependencies from locally cached crates.
@@ -76,17 +124,19 @@ info = {
 }
 with (app/'Contents/Info.plist').open('wb') as f: plistlib.dump(info,f)
 options = ['--options','runtime'] + (['--timestamp'] if identity != '-' else [])
+readable_app_resources(app)
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
 run('/usr/bin/codesign','--verify','--deep','--strict',app)
 app_root = build/'app-root/Applications'; app_root.mkdir(parents=True)
-shutil.copytree(app,app_root/app.name)
+run('/usr/bin/ditto','--extattr',app,app_root/app.name)
 # Include current application source and reproducible driver build instructions.
 with tarfile.open(resources/f'Sources/macntfs-{version}-source.tar.gz','w:gz') as archive:
-    for path in ['frontend','src-tauri','package.json','package-lock.json','vite.config.js','VERSION','src','scripts','Cargo.toml','Cargo.lock','README.md','VALIDATION.md','LICENSE','vendor/manifest.json','vendor/licenses']:
+    for path in ['frontend','src-tauri','package.json','package-lock.json','vite.config.js','VERSION','src','scripts','THIRD_PARTY_MICROVM.md','Cargo.toml','Cargo.lock','README.md','VALIDATION.md','LICENSE','vendor/manifest.json','vendor/licenses']:
         archive.add(root/path,arcname=f'macntfs/{path}')
 # Re-sign after adding the source archive and recreate the staged copy.
+readable_app_resources(app)
 run('/usr/bin/codesign','--force','--sign',identity,*options,app)
-shutil.rmtree(app_root/app.name); shutil.copytree(app,app_root/app.name)
+shutil.rmtree(app_root/app.name); run('/usr/bin/ditto','--extattr',app,app_root/app.name)
 # Bundle relocation is disabled: the privileged helper trusts a fixed root path.
 components = [{'RootRelativeBundlePath':'Applications/macntfs.app','BundleIsRelocatable':False,'BundleIsVersionChecked':True,'BundleHasStrictIdentifier':True,'BundleOverwriteAction':'upgrade'}]
 with (build/'components.plist').open('wb') as f: plistlib.dump(components,f)
@@ -94,6 +144,11 @@ app_scripts = build/'app-scripts'; app_scripts.mkdir()
 (app_scripts/'preinstall').write_text('#!/bin/bash\nset -euo pipefail\nif [ -L /Applications ] || [ -L /Applications/macntfs.app ]; then echo "Unsafe application path" >&2; exit 1; fi\nif [ -d /Applications/macntfs.app ] && /usr/bin/find /Applications/macntfs.app -type l -print -quit | /usr/bin/grep -q .; then echo "Application bundle contains symbolic links" >&2; exit 1; fi\n')
 (app_scripts/'preinstall').chmod(0o755)
 run('/usr/bin/pkgbuild','--scripts',app_scripts,'--root',build/'app-root','--component-plist',build/'components.plist','--identifier','com.yuntu.ntfs-desktop.application','--version',version,'--ownership','recommended',packages/'Application.pkg')
+# The guard executes before vendor components, closing the manual-install race.
+guard_scripts = build/'guard-scripts'; guard_scripts.mkdir()
+preflight = (root/'scripts/runtime-preinstall').read_text().replace('/bin/launchctl bootout system/com.macntfs.helper >/dev/null 2>&1 || true', '')
+(guard_scripts/'preinstall').write_text(preflight); (guard_scripts/'preinstall').chmod(0o755)
+run('/usr/bin/pkgbuild','--nopayload','--scripts',guard_scripts,'--identifier','com.yuntu.ntfs-desktop.update-guard','--version',version,packages/'UpdateGuard.pkg')
 # Combine the official macFUSE components without changing their code-signed
 # payload or scripts. The wrapper itself needs our Developer ID Installer for
 # public distribution; the complete original vendor-signed PKG is also kept.
@@ -101,11 +156,11 @@ for name in ['Core.pkg','PreferencePane.pkg']:
     run('/usr/sbin/pkgutil','--flatten',root/'vendor/macfuse-expanded'/name,packages/name)
 installer_resources = build/'installer-resources'
 shutil.copytree(root/'vendor/macfuse-expanded/Resources',installer_resources)
-welcome = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h1>macntfs</h1><p>免费的 macOS NTFS 读写工具</p><p>此离线安装包包含应用、NTFS-3G 读写引擎、权限助手和 macFUSE。安装和使用均无需 Homebrew 或联网下载。</p><p>首次使用仍需按 macOS 提示授权。稳定模式可能需要允许系统扩展并重启；macOS 15.4 及以上可手动选择实验性 FSKit 后端。</p><p>当前包适用于 Apple Silicon，macOS 12–15、26、27。未签名公证的开发测试包，尚未完成全系统兼容测试。</p></body></html>'
+welcome = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h1>macntfs · 两种读写模式</h1><p>Apple Silicon、macOS 13+ 新安装默认不安装 macFUSE，使用内置 Linux 微虚拟机（实验性）。无需内核扩展、恢复模式或降低启动安全性；仍需管理员安装授权与助手磁盘访问权限。</p><p>需要成熟的稳定模式时，在下一页勾选「稳定模式组件 · macFUSE」。首次启用可能需要授权内核扩展并重启。macOS 12 必须安装稳定模式组件。</p><p>已安装 macFUSE 的用户默认保留稳定组件更新；取消勾选不会卸载已有驱动。应用保留已保存的模式。</p><p>更新前请安全推出磁盘，再从菜单栏退出 macntfs。全部组件已离线提供，无需 Homebrew 或联网。开发测试包尚未签名公证。</p></body></html>'
 (installer_resources/'Welcome.html').write_text(welcome)
 license_text = '\n\n'.join((root/'vendor/licenses'/f).read_text() for f in ['macfuse-LICENSE.txt','ntfs-3g-GPL.txt','ntfs-3g-LGPL.txt'])
 (installer_resources/'License.html').write_text('<html><meta charset="utf-8"><body><h2>macntfs · 免费开源</h2><p>应用代码采用 MIT 许可。驱动保留各自许可，源码随包附带。macFUSE 的商业捆绑需另行取得授权。</p><pre style="white-space:pre-wrap;font-size:11px">'+html.escape(license_text)+'</pre></body></html>')
-conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，菜单栏会实时检测外置 NTFS 磁盘并自动开启读写。安装后台助手后日常挂载无需重复输入密码。</p><p>首次使用请打开应用内「首次使用向导」，按安装、驱动授权、磁盘访问和完成检查四步操作。恢复模式操作说明可在向导中展开查看。</p></body></html>'
+conclusion = '<html><meta charset="utf-8"><body style="font-family:-apple-system,sans-serif;padding:20px"><h2>已安装 macntfs</h2><p>从「应用程序」打开 macntfs，在「设置与更新 → 读写模式」确认模式。免内核扩展模式目前仅手动挂载；稳定模式支持插入后自动读写。</p><p>首次使用按向导完成助手磁盘访问授权。免内核扩展模式跳过 macFUSE 授权步骤；稳定模式按系统提示授权驱动。更新助手后，可能需要移除旧 ntfs-helper 权限条目并重新添加。</p><p>切换模式前先安全推出磁盘，切换后重新连接。取消安装稳定组件不会卸载已有 macFUSE。</p></body></html>'
 (installer_resources/'Conclusion.html').write_text(conclusion)
 tree = ET.parse(root/'vendor/macfuse-expanded/Distribution'); distribution = tree.getroot()
 distribution.find('title').text = 'macntfs'
@@ -113,17 +168,41 @@ distribution.find('welcome').set('file','Welcome.html')
 distribution.find('license').set('file','License.html')
 ET.SubElement(distribution,'conclusion',{'file':'Conclusion.html'})
 distribution.find('options').set('hostArchitectures','arm64')
-distribution.find('options').set('customize','never')
+distribution.find('options').set('customize','always')
 # Do not downgrade an existing newer macFUSE installation.
+# UpdateGuard preinstall performs privileged checks before driver installation.
 distribution.find('script').text += '''
 function hasNewerMacFUSE() {
     var receipt = my.target.receiptForIdentifier('io.macfuse.installer.components.core');
     return receipt != null && system.compareVersions(receipt.version, '5.4.0') > 0;
 }
+function needsStableComponents() {
+    return system.compareVersions(system.version.ProductVersion, '13.0') < 0;
+}
+function defaultStableComponents() {
+    return !hasNewerMacFUSE() && (needsStableComponents() || my.target.receiptForIdentifier('io.macfuse.installer.components.core') != null);
+}
 '''
-for choice in distribution.findall('choice'):
-    choice.set('start_selected','!hasNewerMacFUSE()'); choice.set('start_enabled','false')
 outline = distribution.find('choices-outline')
+for choice in list(distribution.findall('choice')):
+    distribution.remove(choice)
+for line in list(outline): outline.remove(line)
+stable_id='com.macntfs.optional-macfuse'
+stable_choice=ET.SubElement(distribution,'choice',{
+    'id':stable_id,'title':'稳定模式组件 · macFUSE（可选）',
+    'description':'免内核模式不需要此项。稳定模式需要驱动授权；取消勾选不会卸载已有驱动。macOS 12 必选。',
+    'start_selected':'defaultStableComponents()',
+    'enabled':'!hasNewerMacFUSE() && !needsStableComponents()',
+    'visible':'true',
+})
+for identifier in ['io.macfuse.installer.components.core','io.macfuse.installer.components.preferencepane']:
+    ET.SubElement(stable_choice,'pkg-ref',{'id':identifier})
+ET.SubElement(outline,'line',{'choice':stable_id})
+guard_id='com.yuntu.ntfs-desktop.update-guard'
+guard_choice=ET.SubElement(distribution,'choice',{'id':guard_id,'visible':'false','start_selected':'true','start_enabled':'false'})
+ET.SubElement(guard_choice,'pkg-ref',{'id':guard_id})
+outline.insert(0,ET.Element('line',{'choice':guard_id}))
+ET.SubElement(distribution,'pkg-ref',{'id':guard_id,'version':version,'auth':'root'}).text='#UpdateGuard.pkg'
 for identifier,name in [('com.yuntu.ntfs-desktop.runtime','OfflineRuntime.pkg'),('com.yuntu.ntfs-desktop.application','Application.pkg')]:
     choice = ET.SubElement(distribution,'choice',{'id':identifier,'title':identifier,'visible':'false','start_selected':'true','start_enabled':'false'})
     ET.SubElement(choice,'pkg-ref',{'id':identifier})

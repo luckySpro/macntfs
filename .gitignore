@@ -20,3 +20,5 @@ web-dist/
 .DS_Store
 
 /src-tauri/gen/
+/vendor/microvm/
+/vendor/source-cache/
